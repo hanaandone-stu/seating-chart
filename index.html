@@ -48,7 +48,7 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
 .card{background:white;border:1px solid #eee8dc;border-radius:18px;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
 .card:hover{transform:translateY(-4px) rotate(-.25deg);border-color:#f0c96f;box-shadow:0 12px 28px rgba(91,69,25,.09)}
 .cover{aspect-ratio:16/9;background:var(--cream);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.cover img{width:100%;height:100%;object-fit:contain;display:block;transition:transform .35s ease}
+.cover img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
 .card:hover .cover img{transform:scale(1.035)}
 .cover:before,.cover:after{content:"";position:absolute;border:1.5px solid rgba(245,165,47,.35);border-radius:50%;width:150px;height:150px;pointer-events:none}
 .cover:after{width:112px;height:112px}
@@ -150,6 +150,8 @@ const seatPlans = [
     date: "2026/11/28-2026/11/29",
     href: "seatplans/2026/2026-yesung-kaohsiung.html",
     cover: "assets/cover/2026_YESUNG_KAOHSIUNG.webp"
+    coverMode: "cover",
+    coverPosition: "50% 0%"
   },
 ];
 const archive = document.getElementById("archive");

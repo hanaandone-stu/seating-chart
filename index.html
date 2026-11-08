@@ -178,8 +178,10 @@ function render(){
     plans.forEach(p=>{
       const card=document.createElement("a"); card.className="card"; card.href=p.href;
       const cover=document.createElement("div"); cover.className="cover";
-      if(p.cover){const img=document.createElement("img");img.src=p.cover;img.style.objectPosition=p.coverPosition||"50% 50%";img.alt=p.title+" 演唱會封面";img.loading="lazy";img.onerror=()=>{img.remove();const label=document.createElement("div");label.className="cover-label";label.textContent="SEAT PLAN";const small=document.createElement("small");small.textContent="HANA & ONE ARCHIVE";label.append(small);cover.append(label);};cover.append(img);}
-      else {const label=document.createElement("div");label.className="cover-label";label.textContent="SEAT PLAN";const small=document.createElement("small");small.textContent="HANA & ONE ARCHIVE";label.append(small);cover.append(label);}
+     if(p.cover){const img=document.createElement("img");img.src=p.cover;img.style.objectPosition=p.coverPosition||"50% 50%";img.alt=p.title+" 演唱會封面";img.loading="lazy";img.onerror=()=>{img.remove();const label=document.createElement("div");label.className="cover-label";label.textContent="SEAT PLAN";const small=document.createElement("small");small.textContent="HANA & ONE ARCHIVE";label.append(small);cover.append(label);};cover.append(img);}
+else {const label=document.createElement("div");label.className="cover-label";label.textContent="SEAT PLAN";const small=document.createElement("small");small.textContent="HANA & ONE ARCHIVE";label.append(small);cover.append(label);}
+      const body=document.createElement("div");body.className="card-body";
+      const meta=document.createElement("div");meta.className="card-meta";
       const tag=document.createElement("span");tag.className="tag";tag.textContent="SEAT PLAN";
       const date=document.createElement("span");date.textContent=p.date||"";
       meta.append(tag,date);

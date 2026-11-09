@@ -102,7 +102,54 @@ h1{
   .hero{padding-left:18px;padding-right:18px}
   .hero-panel{padding:32px 23px;min-height:230px}
 }
+.pagination{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  margin-top:36px;
+}
 
+.pagination button{
+  min-width:38px;
+  height:38px;
+  padding:0 12px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:white;
+  color:var(--ink);
+  font:inherit;
+  font-size:13px;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.pagination button:hover{
+  border-color:var(--yellow);
+  background:var(--cream);
+}
+
+.pagination button.active{
+  background:var(--yellow);
+  border-color:var(--yellow);
+  font-weight:800;
+}
+
+.pagination button:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+}
+
+.pagination-info{
+  margin-left:8px;
+  color:var(--muted);
+  font-size:11px;
+}
+
+@media(max-width:560px){
+  .pagination{gap:5px;flex-wrap:wrap}
+  .pagination button{min-width:34px;height:34px;padding:0 9px}
+}
 </style>
 </head>
 <body>
@@ -134,7 +181,8 @@ h1{
     </div>
   </div>
   <div id="archive"></div>
-  <div class="empty" id="empty">找不到符合條件的座位表。</div>
+<div class="pagination" id="pagination"></div>
+<div class="empty" id="empty">找不到符合條件的座位表。</div>
 </main>
 
 <footer class="footer">Made with love <span class="footer-flower">✳</span> Seat plans are for reference only.<br>Designed &amp; curated by <strong>@hanaandone.stu</strong></footer>
@@ -211,43 +259,168 @@ const archive = document.getElementById("archive");
 const search = document.getElementById("search");
 const yearFilter = document.getElementById("yearFilter");
 const empty = document.getElementById("empty");
+const pagination = document.getElementById("pagination");
+
+const PAGE_SIZE = 9;
+let currentPage = 1;
 
 [...new Set(seatPlans.map(p => p.year))].sort((a,b)=>b.localeCompare(a)).forEach(year=>{
   const option=document.createElement("option"); option.value=year; option.textContent=year; yearFilter.append(option);
 });
 
+
 function render(){
   const query=search.value.trim().toLocaleLowerCase();
   const year=yearFilter.value;
-  const filtered=seatPlans.filter(p=>(year==="all"||p.year===year)&&p.title.toLocaleLowerCase().includes(query));
-  const years=[...new Set(filtered.map(p=>p.year))].sort((a,b)=>b.localeCompare(a));
+
+  // 先依搜尋與年份篩選
+  const filtered=seatPlans.filter(p=>
+    (year==="all"||p.year===year)&&
+    p.title.toLocaleLowerCase().includes(query)
+  );
+
+  // 計算分頁
+  const totalPages=Math.ceil(filtered.length/PAGE_SIZE);
+  if(totalPages>0&&currentPage>totalPages)currentPage=totalPages;
+
+  const start=(currentPage-1)*PAGE_SIZE;
+  const pagePlans=filtered.slice(start,start+PAGE_SIZE);
+
   archive.innerHTML="";
-  years.forEach(y=>{
-    const section=document.createElement("section");
-    const plans=filtered.filter(p=>p.year===y);
-    const heading=document.createElement("div"); heading.className="year-heading";
-    heading.innerHTML=`<h3>${y}</h3><div class="line"></div><small>${plans.length} EVENT${plans.length===1?"":"S"}</small>`;
-    const grid=document.createElement("div"); grid.className="grid";
-    plans.forEach(p=>{
-      const card=document.createElement("a"); card.className="card"; card.href=p.href;
-      const cover=document.createElement("div"); cover.className="cover";
-     if(p.cover){const img=document.createElement("img");img.src=p.cover;img.style.objectPosition=p.coverPosition||"50% 50%";img.alt=p.title+" 演唱會封面";img.loading="lazy";img.onerror=()=>{img.remove();const label=document.createElement("div");label.className="cover-label";label.textContent="SEAT PLAN";const small=document.createElement("small");small.textContent="HANA & ONE ARCHIVE";label.append(small);cover.append(label);};cover.append(img);}
-else {const label=document.createElement("div");label.className="cover-label";label.textContent="SEAT PLAN";const small=document.createElement("small");small.textContent="HANA & ONE ARCHIVE";label.append(small);cover.append(label);}
-      const body=document.createElement("div");body.className="card-body";
-      const meta=document.createElement("div");meta.className="card-meta";
-      const tag=document.createElement("span");tag.className="tag";tag.textContent=p.artist;
-      const date=document.createElement("span");date.textContent=p.date||"";
-      meta.append(tag,date);
-      const title=document.createElement("h4");title.textContent=p.title;
-      const foot=document.createElement("div");foot.className="card-foot";
-      const desc=document.createElement("span");desc.textContent="查看座位表";
-      const open=document.createElement("span");open.className="open-link";open.innerHTML='OPEN <b>↗</b>';
-      foot.append(desc,open);body.append(meta,title,foot);card.append(cover,body);grid.append(card);
-    });
-    section.append(heading,grid);archive.append(section);
+
+  // 不再依年份分組，直接依資料陣列順序顯示
+  const grid=document.createElement("div");
+  grid.className="grid";
+
+  pagePlans.forEach(p=>{
+    const card=document.createElement("a");
+    card.className="card";
+    card.href=p.href;
+
+    const cover=document.createElement("div");
+    cover.className="cover";
+
+    if(p.cover){
+      const img=document.createElement("img");
+      img.src=p.cover;
+      img.style.objectPosition=p.coverPosition||"50% 50%";
+      img.alt=p.title+" 演唱會封面";
+      img.loading="lazy";
+      img.onerror=()=>{
+        img.remove();
+        const label=document.createElement("div");
+        label.className="cover-label";
+        label.textContent="SEAT PLAN";
+        const small=document.createElement("small");
+        small.textContent="HANA & ONE ARCHIVE";
+        label.append(small);
+        cover.append(label);
+      };
+      cover.append(img);
+    }else{
+      const label=document.createElement("div");
+      label.className="cover-label";
+      label.textContent="SEAT PLAN";
+      const small=document.createElement("small");
+      small.textContent="HANA & ONE ARCHIVE";
+      label.append(small);
+      cover.append(label);
+    }
+
+    const body=document.createElement("div");
+    body.className="card-body";
+
+    const meta=document.createElement("div");
+    meta.className="card-meta";
+
+    const tag=document.createElement("span");
+    tag.className="tag";
+    tag.textContent=p.artist;
+
+    const date=document.createElement("span");
+    date.textContent=p.date||"";
+
+    meta.append(tag,date);
+
+    const title=document.createElement("h4");
+    title.textContent=p.title;
+
+    const foot=document.createElement("div");
+    foot.className="card-foot";
+
+    const desc=document.createElement("span");
+    desc.textContent="查看座位表";
+
+    const open=document.createElement("span");
+    open.className="open-link";
+    open.innerHTML='OPEN <b>↗</b>';
+
+    foot.append(desc,open);
+    body.append(meta,title,foot);
+    card.append(cover,body);
+    grid.append(card);
   });
+
+  if(pagePlans.length){
+    archive.append(grid);
+  }
+
+  // 空結果提示
   empty.style.display=filtered.length?"none":"block";
+
+  // 建立分頁按鈕
+  pagination.innerHTML="";
+
+  if(totalPages>1){
+    const prev=document.createElement("button");
+    prev.textContent="‹";
+    prev.disabled=currentPage===1;
+    prev.onclick=()=>{
+      currentPage--;
+      render();
+    };
+    pagination.append(prev);
+
+    for(let i=1;i<=totalPages;i++){
+      const button=document.createElement("button");
+      button.textContent=i;
+      button.className=i===currentPage?"active":"";
+      button.onclick=()=>{
+        currentPage=i;
+        render();
+      };
+      pagination.append(button);
+    }
+
+    const next=document.createElement("button");
+    next.textContent="›";
+    next.disabled=currentPage===totalPages;
+    next.onclick=()=>{
+      currentPage++;
+      render();
+    };
+    pagination.append(next);
+
+    const info=document.createElement("span");
+    info.className="pagination-info";
+    info.textContent=`${currentPage} / ${totalPages}`;
+    pagination.append(info);
+  }
 }
+
+// 搜尋或切換年份時回到第一頁
+search.addEventListener("input",()=>{
+  currentPage=1;
+  render();
+});
+
+yearFilter.addEventListener("change",()=>{
+  currentPage=1;
+  render();
+});
+
+render();
+
 search.addEventListener("input",render);
 yearFilter.addEventListener("change",render);
 render();

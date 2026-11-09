@@ -280,7 +280,8 @@ let currentPage = 1;
 const artistFilter = document.getElementById("artistFilter");
 
 [...new Set(seatPlans.map(p => p.year))].sort((a,b)=>b.localeCompare(a)).forEach(year=>{
-  const option=document.createElement("option"); option.value=year; option.textContent=year; yearFilter.append(option);
+  const option=document.createElement("option"); option.value=year; option.textContent=year; yearFilter.append(option);});
+
 [...new Set(seatPlans.map(p => p.artist))].sort().forEach(artist=>{
   const option=document.createElement("option");
   option.value=artist;

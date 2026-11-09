@@ -1,15 +1,46 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KYUHYUN 20th Anniversary Fanmeeting ＜Hotel 203＞ IN TAIPEI</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f5f5f5;color:#333;font-family:system-ui,"Noto Sans TC",sans-serif}.header{background:#fff;color:#333;border-bottom:1px solid #ddd;padding:18px 22px;text-align:center}.header h1{font-size:clamp(20px,3vw,30px);margin:0;font-weight:700}.panel{max-width:1100px;margin:16px auto;padding:16px;background:#fff;border:1px solid #e2e2e2;border-radius:8px;box-shadow:0 1px 4px #0000000a}.searchrow{display:grid;grid-template-columns:1.2fr 1fr 1fr auto auto;gap:9px;align-items:end}.field{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#526477}.field input,.field select{width:100%;min-width:0;padding:10px;border:1px solid #d5d5d5;border-radius:6px;font:inherit;color:#243447;background:white}button{border:1px solid #ccc;border-radius:6px;padding:10px 14px;background:#666;color:white;font:inherit;cursor:pointer}button.secondary{background:#eee;color:#444;border-color:#d5d5d5}button:hover{filter:brightness(.96)}.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}.tip{font-size:13px;color:#666;margin:10px 0 0;line-height:1.7}.result{font-size:13px;color:#315f86;margin-left:auto}#wrap{overflow:auto;margin:0 auto;padding:12px;max-width:100%;max-height:68vh;text-align:center;scroll-behavior:smooth;overscroll-behavior:contain}#map{display:block;margin:0 auto;background:white;box-shadow:0 2px 12px #0002;max-width:none;transform-origin:top center}.seat{cursor:pointer}.seat.marked .seat-shape{fill:#f28b35!important;stroke:#a94e0b!important;stroke-width:2.8!important}.seat.marked text{fill:#fff!important}.seat:hover .seat-shape{stroke:#315f86;stroke-width:2.5}.footer{text-align:center;color:#777;font-size:12px;padding:18px;line-height:1.8}.modal-backdrop{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal-backdrop.show{display:flex}.modal{width:min(390px,100%);background:#fff;border-radius:10px;padding:22px;box-shadow:0 12px 40px #0003}.modal h2{font-size:18px;margin:0 0 10px;color:#333}.modal p{font-size:14px;line-height:1.65;color:#555;margin:0 0 18px}.modal button{min-width:90px}(max-width:760px){.searchrow{grid-template-columns:1fr 1fr}.searchrow .field:first-child{grid-column:1/-1}.panel{margin:10px}.result{width:100%;margin:4px 0 0}}
+ :root{--ink:#171717;--yellow:#ffc64a;--orange:#f5a52f;--paper:#fffdf9;--white:#fff;--muted:#8b877f;--line:#eee8dc;--cream:#fff8e9;--blue:#254968}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+.header{max-width:1160px;margin:0 auto;padding:32px 30px 24px;text-align:left;border:0;background:transparent;color:var(--ink)}
+.header:before{content:"HANA & ONE  /  CONCERT SEAT ARCHIVE";display:block;font:700 10px/1.5 "Helvetica Neue",Arial,sans-serif;letter-spacing:.2em;color:var(--muted);margin-bottom:16px}
+.header h1{font-size:clamp(23px,3.4vw,38px);line-height:1.25;letter-spacing:.01em;margin:0;font-weight:900;max-width:980px}
+.header:after{content:"SEAT PLAN  ·  FIND YOUR VIEW";display:block;margin-top:13px;font:600 11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.15em;color:#a17a36}
+.panel{max-width:1100px;margin:0 auto 24px;padding:25px 28px 23px;background:var(--white);border:1px solid var(--line);border-radius:20px;box-shadow:0 8px 28px rgba(55,43,20,.035)}
+.panel:before{content:"FIND YOUR SEAT";display:block;font:700 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:.2em;color:#a17a36;margin-bottom:17px}
+.searchrow{display:grid;grid-template-columns:1.2fr 1fr 1fr auto auto;gap:10px;align-items:end}
+.field{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:#665f54;letter-spacing:.02em}
+.field input,.field select{width:100%;min-width:0;padding:12px 13px;border:1px solid var(--line);border-radius:9px;font:inherit;font-weight:400;color:var(--ink);background:#fffdf9;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input:focus,.field select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(245,165,47,.14)}
+button{border:1px solid var(--ink);border-radius:9px;padding:12px 17px;background:var(--ink);color:white;font:700 13px inherit;cursor:pointer;transition:transform .18s,background .18s,border-color .18s}
+button:hover{transform:translateY(-1px);filter:none;background:#34302a}
+button.secondary{background:var(--cream);color:#5f5140;border-color:#f0e3c8}
+button.secondary:hover{background:#fff0cf}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px;align-items:center}
+.tools #png{background:var(--yellow);border-color:var(--yellow);color:#332b1d}
+.tip{font-size:12px;color:#777168;margin:17px 0 0;line-height:1.85;padding:13px 15px;background:#fffaf0;border-radius:10px}
+.tip strong{display:block;color:#574a35;margin-bottom:5px}
+.tip ul{margin:0;padding-left:19px}
+.result{font-size:12px;color:var(--blue);margin-left:auto;font-weight:600}
+#wrap{overflow:auto;margin:0 auto 24px;padding:18px 20px 28px;max-width:1160px;max-height:68vh;text-align:center;background:var(--white);border:1px solid var(--line);border-radius:20px;box-shadow:0 8px 28px rgba(55,43,20,.035);scroll-behavior:smooth;overscroll-behavior:contain}
+#map{display:block;margin:0 auto;background:white;box-shadow:0 2px 18px rgba(0,0,0,.07);max-width:none;transform-origin:top center}
+.seat{cursor:pointer}.seat.marked .seat-shape{fill:var(--orange)!important;stroke:#b86c16!important;stroke-width:2.8!important}.seat.marked text{fill:#fff!important}.seat:hover .seat-shape{stroke:var(--blue);stroke-width:2.5}
+.footer{text-align:center;color:var(--muted);font-size:11px;padding:28px 18px 34px;line-height:1.9}
+.modal-backdrop{position:fixed;inset:0;background:rgba(23,23,23,.48);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal-backdrop.show{display:flex}
+.modal{width:min(390px,100%);background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 18px 55px #0003}
+.modal h2{font-size:18px;margin:0 0 10px;color:var(--ink)}.modal p{font-size:14px;line-height:1.65;color:#625d54;margin:0 0 18px}.modal button{min-width:90px}
+@media(max-width:760px){.header{padding:25px 18px 20px}.header h1{font-size:23px}.panel{margin:0 12px 16px;padding:20px 16px;border-radius:15px}.searchrow{grid-template-columns:1fr 1fr}.searchrow .field:first-child{grid-column:1/-1}.searchrow button{width:100%}.tools button{flex:1 1 auto}.result{width:100%;margin:5px 0 0}#wrap{margin:0 10px 16px;padding:10px;border-radius:14px}}
 </style></head><body>
 <header class="header"><h1>KYUHYUN 20th Anniversary Fanmeeting ＜Hotel 203＞ IN TAIPEI</h1></header>
 <section class="panel"><div class="searchrow">
 <label class="field">選擇區域<select id="area"><option value="">請選擇區域</option></select></label>
 <label class="field">排數<input id="row" type="text" placeholder="例如：01、02、03"></label>
 <label class="field">座號<input id="seat" type="text" placeholder="例如：01、02、03"></label>
-<button id="search">查詢</button><button id="add" class="secondary">加入對照</button>
-</div><div class="tools"><button id="clear" class="secondary">清除標記</button><button id="minus" class="secondary">－ 縮小</button><button id="plus" class="secondary">＋ 放大</button><button id="reset" class="secondary">重設大小</button><button id="png">匯出 PNG 圖檔</button><span id="result" class="result">請選擇區域並輸入排數、座號</span></div><div class="tip"><strong>使用說明</strong><ul><li>先選擇座位區，再輸入排數與座號，按「查詢」標記座位。</li><li>按「加入對照」可連續加入其他座位，同時標記多個位置。</li><li>按「清除標記」可清除所有已標記座位；也可以直接點擊座位圖上的座位切換標記。</li><li>查詢或加入對照後，座位圖會自動平順移動到該座位附近；使用「放大／縮小」調整座位圖大小，按「重設大小」恢復原始比例。</li><li>按「匯出 PNG 圖檔」下載目前座位圖及標記結果。</li><li>請依照座位圖上的格式輸入排數與座號；若座位圖顯示 01、02、03，請輸入 01、02、03，個位數前方需要補 0。</li></ul></div></section>
+<button id="search">查詢</button><button id="add" class="secondary">加入比較</button>
+</div><div class="tools"><button id="clear" class="secondary">清除標記</button><button id="minus" class="secondary">－ 縮小</button><button id="plus" class="secondary">＋ 放大</button><button id="reset" class="secondary">重設大小</button><button id="png">匯出 PNG 圖檔</button><span id="result" class="result">請選擇區域並輸入排數、座號</span></div><div class="tip"><strong>使用說明</strong><ul><li>先選擇座位區，再輸入排數與座號，按「查詢」標記座位。</li><li>按「加入比較」可連續加入其他座位，同時標記多個位置。</li><li>按「清除標記」可清除所有已標記座位；也可以直接點擊座位圖上的座位切換標記。</li><li>查詢或加入比較後，座位圖會自動平順移動到該座位附近；使用「放大／縮小」調整座位圖大小，按「重設大小」恢復原始比例。</li><li>按「匯出 PNG 圖檔」下載目前座位圖及標記結果。</li><li>請依照座位圖上的格式輸入排數與座號；若座位圖顯示 01、02、03，請輸入 01、02、03，個位數前方需要補 0。</li></ul></div></section>
 <div class="modal-backdrop" id="alertModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal"><h2 id="modalTitle">請檢查輸入資料</h2><p id="modalMessage"></p><div style="text-align:right"><button id="modalOk">我知道了</button></div></div></div>
 <div id="wrap"><svg id="map" viewBox="0 0 1544 1164" width="1544" height="1164" xmlns="http://www.w3.org/2000/svg"></svg></div><div class="footer">座位資訊以主辦單位及現場公告為準<br>Seat plan design &amp; layout: @hanaandone.stu</div>
 <script>
@@ -28,6 +59,8 @@ function render(){svg.replaceChildren();items.forEach(o=>{let g=E('g',{class:'ob
  else if(o.type==='zoneLabel'||o.type==='text'){const al=o.textAlign||(o.type==='zoneLabel'?'middle':'start'),tx=al==='start'?0:al==='middle'?o.w/2:o.w;t=E('text',{x:tx,y:Math.max(18,o.h*.72),'font-size':o.fontSize||16,'font-family':o.fontFamily||'sans-serif',fill:o.fill||'#243447','font-weight':700,'text-anchor':al==='start'?'start':al==='middle'?'middle':'end'});t.textContent=o.text;g.append(t)}
  else if(o.type==='line'){g.append(E('line',{x1:0,y1:0,x2:o.w,y2:o.h,stroke:o.stroke||'#243447','stroke-width':3}))}
  else if(o.type==='circle'){g.append(E('ellipse',{cx:o.w/2,cy:o.h/2,rx:o.w/2,ry:o.h/2,fill:o.fill||'none',stroke:o.stroke||'#243447','stroke-width':2}));if(o.text){t=E('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,fill:'#fff'});t.textContent=o.text;g.append(t)}}
+ else if(o.type==='trapezoid'){g.append(E('polygon',{points:`${o.w*.2},0 ${o.w*.8},0 ${o.w},${o.h} 0,${o.h}`,fill:o.fill||'none',stroke:o.stroke||'#243447','stroke-width':2}));if(o.text){t=E('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||'sans-serif','font-weight':700,fill:'#fff'});t.textContent=o.text;g.append(t)}}
+ else if(o.type==='diamond'){g.append(E('polygon',{points:`${o.w/2},0 ${o.w},${o.h/2} ${o.w/2},${o.h} 0,${o.h/2}`,fill:o.fill||'none',stroke:o.stroke||'#243447','stroke-width':2}));if(o.text){t=E('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||'sans-serif','font-weight':700,fill:'#fff'});t.textContent=o.text;g.append(t)}}
  else{sh=E('rect',{width:o.w,height:o.h,rx:o.type==='roundRect'?Math.max(0,Math.min(Number(o.radius??12),Math.min(o.w,o.h)/2)):(o.type==='stage'?3:1),fill:o.fill||'none',stroke:o.stroke||'#243447','stroke-width':2});g.append(sh);if(o.text){t=E('text',{x:o.w/2,y:o.h/2+6,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||'sans-serif','font-weight':700,fill:'#fff'});t.textContent=o.text;g.append(t)}}
  svg.append(g);if(o.type==='seat')nodes.set(o.id,g)
  })}

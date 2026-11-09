@@ -178,6 +178,9 @@ h1{
     <div class="controls">
       <div class="search-wrap"><span>⌕</span><input id="search" type="search" placeholder="搜尋演唱會名稱…" aria-label="搜尋演唱會名稱"></div>
       <select id="yearFilter" aria-label="依年份篩選"><option value="all">所有年份</option></select>
+      <select id="artistFilter" aria-label="依團體或藝人篩選">
+  <option value="all">所有團體／藝人</option>
+</select>
     </div>
   </div>
   <div id="archive"></div>
@@ -263,21 +266,29 @@ const pagination = document.getElementById("pagination");
 
 const PAGE_SIZE = 9;
 let currentPage = 1;
+const artistFilter = document.getElementById("artistFilter");
 
 [...new Set(seatPlans.map(p => p.year))].sort((a,b)=>b.localeCompare(a)).forEach(year=>{
   const option=document.createElement("option"); option.value=year; option.textContent=year; yearFilter.append(option);
+[...new Set(seatPlans.map(p => p.artist))].sort().forEach(artist=>{
+  const option=document.createElement("option");
+  option.value=artist;
+  option.textContent=artist;
+  artistFilter.append(option);
 });
 
 
 function render(){
-  const query=search.value.trim().toLocaleLowerCase();
-  const year=yearFilter.value;
+ const query=search.value.trim().toLocaleLowerCase();
+const year=yearFilter.value;
+const artist=artistFilter.value;
 
-  // 先依搜尋與年份篩選
-  const filtered=seatPlans.filter(p=>
-    (year==="all"||p.year===year)&&
-    p.title.toLocaleLowerCase().includes(query)
-  );
+// 依搜尋、年份及團體／藝人篩選
+const filtered=seatPlans.filter(p=>
+  (year==="all"||p.year===year)&&
+  (artist==="all"||p.artist===artist)&&
+  p.title.toLocaleLowerCase().includes(query)
+);
 
   // 計算分頁
   const totalPages=Math.ceil(filtered.length/PAGE_SIZE);
@@ -415,6 +426,11 @@ search.addEventListener("input",()=>{
 });
 
 yearFilter.addEventListener("change",()=>{
+  currentPage=1;
+  render();
+});
+
+  artistFilter.addEventListener("change",()=>{
   currentPage=1;
   render();
 });

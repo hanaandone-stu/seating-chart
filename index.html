@@ -55,6 +55,10 @@ input:focus,select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(25
 .card:hover .cover img{transform:scale(1.035)}
 .cover:before,.cover:after{content:"";position:absolute;border:1.5px solid rgba(245,165,47,.35);border-radius:50%;width:150px;height:150px;pointer-events:none}
 .cover:after{width:112px;height:112px}
+.cover:has(img)::before,
+.cover:has(img)::after{
+  display:none;
+}
 .cover-label{z-index:1;color:#27231c;font-family:"Helvetica Neue",Arial,sans-serif;font-size:14px;font-weight:700;letter-spacing:.16em;text-align:center}
 .cover-label small{display:block;font-family:"Helvetica Neue",Arial,sans-serif;font-size:9px;letter-spacing:.16em;color:#a18d65;margin-top:8px}
 .card-body{padding:16px 18px 17px}

@@ -36,7 +36,44 @@ function normalizeNumber(v){const s=String(v??'').trim();if(!s)return '';if(/^d+
 function showAlert(title,message){document.getElementById('modalTitle').textContent=title;document.getElementById('modalMessage').textContent=message;document.getElementById('alertModal').classList.add('show');document.getElementById('modalOk').focus()}
 document.getElementById('modalOk').onclick=()=>document.getElementById('alertModal').classList.remove('show');document.getElementById('alertModal').addEventListener('click',e=>{if(e.target.id==='alertModal')e.currentTarget.classList.remove('show')});document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('alertModal').classList.remove('show')});
 function findSeat(){const areaName=areaSelect.value,rowRaw=document.getElementById('row').value,seatRaw=document.getElementById('seat').value;if(!areaName){showAlert('尚未選擇區域','請先從「選擇區域」下拉選單中選擇要查詢的座位區。');return null}if(!String(rowRaw).trim()){showAlert('尚未輸入排數','請依照座位圖上的格式輸入排數，例如 01、02、03。');document.getElementById('row').focus();return null}if(!String(seatRaw).trim()){showAlert('尚未輸入座號','請依照座位圖上的格式輸入座號，例如 01、02、03。');document.getElementById('seat').focus();return null}const row=normalizeNumber(rowRaw),number=normalizeNumber(seatRaw);return seats.find(o=>areas.get(o.groupId)===areaName&&normalizeNumber(rowFor(o))===row&&normalizeNumber(o.text)===number)||null}
-function focusSeat(add){const o=findSeat();if(!o){if(areaSelect.value&&String(document.getElementById('row').value).trim()&&String(document.getElementById('seat').value).trim())showAlert('找不到符合的座位','查無這個座位，請確認區域、排數與座號是否正確。若座位圖顯示 01，請輸入 01，不要省略前面的 0。');return}if(!add)marked.clear();marked.add(o.id);updateMarks();document.getElementById('result').textContent='已標記：'+(areas.get(o.groupId)||'')+' '+rowFor(o)+'排 '+o.text+'號'+(marked.size>1?'（共 '+marked.size+' 個）':'');}
+function focusSeat(add){
+  const o=findSeat();
+
+  if(!o){
+    if(areaSelect.value&&String(document.getElementById('row').value).trim()&&String(document.getElementById('seat').value).trim())
+      showAlert('找不到符合的座位','查無這個座位，請確認區域、排數與座號是否正確。若座位圖顯示 01，請輸入 01，不要省略前面的 0。');
+    return;
+  }
+
+  if(!add)marked.clear();
+  marked.add(o.id);
+  updateMarks();
+
+  // 自動捲動至查詢到的座位
+  const seatNode=nodes.get(o.id);
+  const wrap=document.getElementById('wrap');
+
+  if(seatNode&&wrap){
+    const seatRect=seatNode.getBoundingClientRect();
+    const wrapRect=wrap.getBoundingClientRect();
+
+    // 左右捲動座位圖
+    wrap.scrollTo({
+      left:wrap.scrollLeft+seatRect.left+seatRect.width/2-wrapRect.left-wrap.clientWidth/2,
+      behavior:'smooth'
+    });
+
+    // 上下捲動整個網頁
+    window.scrollTo({
+      top:window.scrollY+seatRect.top+seatRect.height/2-window.innerHeight/2,
+      behavior:'smooth'
+    });
+  }
+
+  document.getElementById('result').textContent=
+    '已標記：'+(areas.get(o.groupId)||'')+' '+rowFor(o)+'排 '+o.text+'號'+
+    (marked.size>1?'（共 '+marked.size+' 個）':'');
+}
 document.getElementById('search').onclick=()=>focusSeat(false);document.getElementById('add').onclick=()=>focusSeat(true);[document.getElementById('row'),document.getElementById('seat')].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')focusSeat(false)}));document.getElementById('clear').onclick=()=>{marked.clear();updateMarks();document.getElementById('result').textContent='已清除所有標記'};
 let zoom=1;function setZoom(){svg.style.width=(W*zoom)+'px';svg.style.height=(H*zoom)+'px'}document.getElementById('plus').onclick=()=>{zoom=Math.min(3,zoom+.15);setZoom()};document.getElementById('minus').onclick=()=>{zoom=Math.max(.25,zoom-.15);setZoom()};document.getElementById('reset').onclick=()=>{zoom=1;setZoom()};
 document.getElementById('png').onclick=()=>{const clone=svg.cloneNode(true);clone.setAttribute('width',W);clone.setAttribute('height',H);clone.setAttribute('xmlns',NS);const xml=new XMLSerializer().serializeToString(clone),blob=new Blob([xml],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{const scale=2,titleH=90,c=document.createElement('canvas');c.width=W*scale;c.height=(H+titleH)*scale;const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='#333';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold '+(28*scale)+'px system-ui, sans-serif';ctx.fillText(document.title,c.width/2, titleH*scale/2,c.width-80*scale);ctx.drawImage(img,0,titleH*scale,c.width,H*scale);ctx.save();ctx.globalAlpha=.13;ctx.fillStyle='#555';ctx.textAlign='center';ctx.textBaseline='middle';const wm='@hanaandone.stu',fs=22*scale;ctx.font='bold '+fs+'px system-ui, sans-serif';const tw=ctx.measureText(wm).width,dx=tw+fs*1.5,dy=fs*3.2;ctx.translate(c.width/2,c.height/2);ctx.rotate(-Math.PI/6);let r=0;for(let y=-c.height*1.5;y<c.height*1.5;y+=dy){for(let x=-c.width*1.5-dx;x<c.width*1.5+dx;x+=dx)ctx.fillText(wm,x+(r%2)*dx/2,y);r++}ctx.restore();c.toBlob(b=>{if(b){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='座位表.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}URL.revokeObjectURL(url)},'image/png')};img.onerror=()=>{URL.revokeObjectURL(url);showAlert('PNG 匯出失敗','目前無法產生圖檔，請重新操作。')};img.src=url};

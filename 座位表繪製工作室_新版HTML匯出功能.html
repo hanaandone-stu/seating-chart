@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>座位表繪製工作室</title>
+<style>
+:root{--bg:#eef1f5;--panel:#fff;--ink:#243447;--muted:#718096;--line:#dce2e9;--blue:#315f86;--accent:#e98a45}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:var(--ink);background:var(--bg)}
+header{height:58px;background:#24384d;color:white;display:flex;align-items:center;justify-content:space-between;padding:0 18px;gap:12px}
+header strong{font-size:17px}button,select,input{font:inherit}button{border:1px solid var(--line);background:white;color:var(--ink);padding:8px 11px;border-radius:7px;cursor:pointer}button:hover{border-color:#8da9c1;background:#f6f9fc}button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}button.active{background:#e7f0f8;border-color:#6e96b7;color:#214e73}
+.top-actions{display:flex;gap:7px;flex-wrap:wrap}.layout{display:grid;grid-template-columns:190px minmax(300px,1fr) 245px;height:calc(100vh - 58px)}
+aside{background:var(--panel);padding:14px;overflow:auto}.left{border-right:1px solid var(--line)}.right{border-left:1px solid var(--line)}
+h3{font-size:13px;margin:2px 0 10px;color:#516477;letter-spacing:.04em}.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.tool{min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px}.tool b{font-size:20px;font-weight:500}.section{border-top:1px solid var(--line);padding-top:14px;margin-top:15px}
+main{min-width:0;display:flex;flex-direction:column}.canvasbar{height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#f8fafc;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted);gap:8px}.canvas-wrap{flex:1;min-height:0;overflow:auto;padding:22px;background:#e8edf2}
+.canvas-x-scroll{height:16px;flex:none;overflow-x:auto;overflow-y:hidden;background:#e8edf2;border-bottom:1px solid var(--line)}.canvas-x-scroll>div{height:1px}
+#canvasSizer{position:relative;flex:none}#stage{position:absolute;top:0;left:0;width:1400px;height:900px;background-color:white;background-image:linear-gradient(#e8edf2 1px,transparent 1px),linear-gradient(90deg,#e8edf2 1px,transparent 1px);background-size:24px 24px;box-shadow:0 2px 12px #1b2b3b18;transform-origin:top left}
+#objects{width:100%;height:100%;display:block;overflow:visible;touch-action:none;cursor:crosshair}
+.object{cursor:move}.resize-handle{pointer-events:all}.object.selected .shape{stroke:#e8873d!important;stroke-width:3!important}.object text{pointer-events:none;user-select:none}.field{display:flex;flex-direction:column;gap:5px;margin:9px 0;font-size:12px;color:#526477}.field input,.field select{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;color:var(--ink);background:white}.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:11px;color:var(--muted);line-height:1.5}.wide{width:100%;margin-top:6px}.danger{color:#a33;border-color:#e7caca}.status{font-size:11px;color:#66788a}
+@media(max-width:900px){.layout{grid-template-columns:150px minmax(280px,1fr);}.right{display:none}aside{padding:10px}.tool-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){header{height:auto;min-height:58px;align-items:flex-start;padding:10px;flex-direction:column}.layout{height:calc(100vh - 100px);grid-template-columns:112px minmax(250px,1fr)}.tool{min-height:55px}.canvas-wrap{padding:10px}}
+</style>
+</head>
+<body>
+<header>
+  <strong>▦ 座位表繪製工作室</strong>
+  <div class="top-actions">
+    <button id="undo">↶ 復原</button><button id="redo">↷ 重做</button>
+    <button id="save">儲存專案</button><button id="load">載入專案</button>
+    <button class="primary" id="export">匯出互動 HTML</button>
+  </div>
+</header>
+<div class="layout">
+<aside class="left">
+  <h3>繪圖工具</h3>
+  <div class="tool-grid">
+    <button class="tool active" data-tool="select"><b>↖</b>選取／移動</button>
+    <button class="tool" data-tool="seat"><b>▦</b>單一座位</button>
+    <button class="tool" data-tool="rect"><b>▭</b>矩形</button>
+    <button class="tool" data-tool="roundRect"><b>▢</b>圓角矩形</button>
+    <button class="tool" data-tool="circle"><b>◯</b>圓形</button>
+    <button class="tool" data-tool="trapezoid"><b>⏢</b>梯形</button>
+    <button class="tool" data-tool="diamond"><b>◇</b>菱形</button>
+    <button class="tool" data-tool="line"><b>／</b>直線</button>
+    <button class="tool" data-tool="text"><b>T</b>文字標籤</button>
+    <button class="tool" data-tool="stage"><b>▰</b>舞台</button>
+    <button class="tool" data-tool="seatblock"><b>▤</b>座位區</button>
+  </div>
+  <div class="section">
+    <h3>座位批次選取</h3>
+    <div class="row2">
+      <button id="selectSeatRow" type="button">選取整排</button>
+      <button id="selectSeatColumn" type="button">選取整欄</button>
+    </div>
+    <small class="hint">先點選一個座位，再選取同區域的整排或整欄。</small>
+  </div>
+  <div class="section">
+    <h3>座位區快速建立</h3>
+    <label class="field">區域名稱<input id="blockName" value="A區"></label>
+    <label class="field">區域名稱顯示位置
+      <select id="zoneLabelPosition">
+        <option value="top">顯示在座位區上方</option>
+        <option value="bottom">顯示在座位區下方</option>
+      </select>
+    </label>
+    <label class="field"><span>數字格式</span><span><input id="padZero" type="checkbox" checked style="width:auto;margin-right:6px">個位數補 0（01、02…）</span></label>
+    <div class="row2">
+      <label class="field">排數起始<input id="rowStart" type="number" value="1"></label>
+      <label class="field">排數結尾<input id="rowEnd" type="number" value="5"></label>
+    </div>
+    <div class="row2">
+      <label class="field">座號起始<input id="seatStart" type="number" value="1"></label>
+      <label class="field">座號結尾<input id="seatEnd" type="number" value="10"></label>
+    </div>
+    <div class="row2">
+      <label class="field">水平間距<input id="gapX" type="number" min="24" max="240" step="24" value="24"></label>
+      <label class="field">垂直間距<input id="gapY" type="number" min="24" max="240" step="24" value="24"></label>
+    </div>
+    <p class="hint">排數與座號都採起始、結尾的方式設定，建立時會自動計算總排數與每排座位數。</p>
+    <label class="field">座號排列方向
+      <select id="numberDirection"><option value="ltr">由左至右</option><option value="rtl">由右至左</option></select>
+    </label>
+    <label class="field">座號生成方式
+      <select id="numberingMode">
+        <option value="sequential">連續號碼（1、2、3、4…）</option>
+        <option value="odd">連續奇數（1、3、5、7…）</option>
+        <option value="even">連續偶數（2、4、6、8…）</option>
+      </select>
+    </label>
+    <button class="primary wide" id="createBlock">＋ 建立座位區</button>
+    <p class="hint">建立後每個座位都是獨立物件，可分別修改或移動。</p>
+  </div>
+  <div class="section">
+    <h3>座位區調整</h3>
+    <p class="hint">插入／刪除以畫布目前選取的格子為基準，可在沒有座位的空白區操作。刪除會移除游標所在欄／列；重新編號仍需選取座位區。</p>
+    <button class="wide" id="renumberBlock">重新編號選取座位區</button>
+    <label class="field">插入類型
+      <select id="insertType">
+        <option value="column">整欄</option>
+        <option value="row">整列</option>
+        <option value="cell">單格（推移同列／同行內容）</option>
+      </select>
+    </label>
+    <label class="field">插入方向
+      <select id="insertDirection">
+        <option value="left">向左</option>
+        <option value="right" selected>向右</option>
+        <option value="up">向上</option>
+        <option value="down">向下</option>
+      </select>
+    </label>
+    <label class="field">欄數／列數<input id="insertCount" type="number" min="1" max="30" value="1"></label>
+    <button class="wide" id="insertSeats">＋ 插入空白格／欄／列</button>
+    <button class="wide danger" id="deleteGridLines">－ 刪除游標所在欄／列</button>
+    <p class="hint">Shift＋滑鼠拖曳可框選空白格範圍；或先點一格，再按住 Shift＋方向鍵延伸選取。刪除時依方向刪除選取範圍內的欄或列，完全空白也能刪除。</p>
+  </div>
+  <div class="section">
+    <h3>畫布</h3>
+    <button class="wide" id="zoomFit">重設畫布視野</button>
+    <div class="row2"><button id="extendRight">向右延伸</button><button id="extendDown">向下延伸</button></div>
+    <button class="wide" id="toggleGrid">切換格線</button>
+    <div class="section">
+      <h3>演唱會與匯出設定</h3>
+      <label class="field">演唱會標題<input id="pngTitle" type="text" placeholder="例如：SUPER JUNIOR FANCON [1983]"></label>
+      <label class="field">PNG 浮水印<input type="text" value="@hanaandone.stu" readonly></label>
+      <label class="field">浮水印透明度<input id="pngWatermarkOpacity" type="range" min="5" max="50" value="16"></label>
+      <button class="primary wide" id="exportPng">匯出 PNG 圖檔</button>
+    </div>
+    <button class="wide" id="clearAll">清空畫布</button>
+  </div>
+</aside>
+<main>
+  <div class="canvasbar"><span id="canvasSizeLabel">工作區　1400 × 900｜格線 24 × 24</span><span id="modeLabel">目前工具：選取／移動</span><span class="status" id="status">就緒</span><span class="zoom-controls"><button id="zoomOut" type="button">－</button><span id="zoomLabel">100%</span><button id="zoomIn" type="button">＋</button><button id="zoomFit" type="button">符合視窗</button></span></div>
+  <div class="canvas-x-scroll" id="canvasXScroll"><div id="canvasXScrollInner"></div></div>
+  <div class="canvas-wrap" id="canvasWrap"><div id="canvasSizer"><div id="stage"><svg id="objects" viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg"></svg></div></div></div>
+</main>
+<aside class="right">
+  <h3>物件屬性</h3>
+  <div id="emptyProps" class="hint">選取畫布上的物件，即可在這裡編輯位置、尺寸、文字與顏色。</div>
+  <div id="props" hidden>
+    <label class="field">物件名稱<input id="pName"></label>
+    <div class="row2">
+      <label class="field">X<input id="pX" type="number"></label><label class="field">Y<input id="pY" type="number"></label>
+    </div>
+    <div class="row2">
+      <label class="field">寬度<input id="pW" type="number" min="1"></label><label class="field">高度<input id="pH" type="number" min="1"></label>
+    </div>
+    <label class="field">顯示文字<input id="pText"></label>
+    <label class="field" id="textAlignField">文字對齊
+      <select id="pTextAlign"><option value="start">靠左對齊</option><option value="middle">置中對齊</option><option value="end">靠右對齊</option></select>
+    </label>
+    <div class="row2">
+      <label class="field">字型大小<input id="pFontSize" type="number" min="6" max="120" value="14"></label>
+      <label class="field">字體<select id="pFontFamily">
+        <option value="system-ui,-apple-system,'Noto Sans TC',sans-serif">系統預設／思源黑體</option>
+        <option value="'Noto Sans TC',sans-serif">Noto Sans TC</option>
+        <option value="'Microsoft JhengHei',sans-serif">微軟正黑體</option>
+        <option value="Arial,sans-serif">Arial</option>
+        <option value="Georgia,serif">Georgia 明體風格</option>
+        <option value="'Courier New',monospace">Courier New 等寬字</option>
+      </select></label>
+    </div>
+    <div class="row2">
+      <label class="field">填滿顏色<input id="pFill" type="color"></label><label class="field">線條顏色<input id="pStroke" type="color"></label>
+    </div>
+    <label class="field" id="seatTextColorField" hidden>座位文字顏色<input id="pTextColor" type="color" value="#ffffff"></label>
+    <label class="field">填滿色 HEX<input id="pFillHex" type="text" value="#6c9bc5" maxlength="7" placeholder="#RRGGBB"></label>
+    <label class="field" id="radiusField" hidden>圓角半徑<input id="pRadius" type="number" min="0" max="200" step="1" value="12"></label>
+    <label class="field">旋轉角度<input id="pRotate" type="number" min="-360" max="360"></label>
+    <div class="row2"><button id="duplicate">複製物件</button><button id="front">移到最上層</button></div>
+    <button class="wide danger" id="delete">刪除物件</button>
+    <p class="hint">選取圖案後可拖曳周圍八個控制點調整大小；Shift 拖曳可框選；Ctrl 或 Shift + 點擊可多選；方向鍵可延伸選取範圍。選取單一座位可修改座號字型；選取整個座位區可一次套用所有座位的字型大小與字體。文字物件與區域標題也可個別設定字型。色彩可用選色器或 HEX 色碼輸入。</p>
+  </div>
+  <div class="section">
+    <h3>使用提示</h3>
+    <p class="hint">• 選取工具：拖曳物件移動。<br>• 座位會自動吸附至 24 × 24 格線；座位區可自行設定排數與座號的起始、結尾。圓角矩形可在右側調整圓角半徑；梯形與菱形可直接縮放調整比例。<br>• 點選空白格會顯示橘色框線與格子座標；座位區工具會從你點選的格子開始建立。<br>• 畫布可用「向右延伸／向下延伸」增加空間，也會在新增物件超出邊界時自動延伸。<br>• 快捷鍵：方向鍵移動座位選取；Shift+方向鍵延伸範圍；Ctrl+Shift+方向鍵選到同列／同欄最遠座位；Ctrl+A 全選；Ctrl+C/X/V 複製／剪下／貼上；Ctrl+D 複製；Ctrl+Z/Y 復原／重做；Delete 刪除；Esc 取消。<br>• 匯出後的 HTML 可獨立開啟，支援座位點選與區域互動。</p>
+  </div>
+</aside>
+</div>
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
+<script>
+const svg=document.getElementById('objects'),NS='http://www.w3.org/2000/svg';
+let items=[],selected=null,selectedIds=new Set(),tool='select',drag=null,resizeDrag=null,selectionDrag=null,selectionAnchorId=null,undoStack=[],redoStack=[],grid=true,clipboard=null;
+let canvasW=1400,canvasH=900,hoverCell=null,selectedCell=null,selectedCellRange=null,keyboardSeatRange=null;
+// 新增元件沿用最近使用／選取的填滿色與線條色
+let lastFillColor='#6c9bc5',lastStrokeColor='#315f86';
+const GRID=24;const snap=v=>Math.round(v/GRID)*GRID;const cellAt=p=>({x:Math.floor(p.x/GRID)*GRID,y:Math.floor(p.y/GRID)*GRID});
+const $=id=>document.getElementById(id);
+const clone=x=>JSON.parse(JSON.stringify(x));
+let zoom=1;
+function syncCanvasSize(){
+ $('stage').style.width=canvasW+'px';$('stage').style.height=canvasH+'px';
+ $('stage').style.transform=`scale(${zoom})`;
+ $('canvasSizer').style.width=(canvasW*zoom)+'px';$('canvasSizer').style.height=(canvasH*zoom)+'px';
+ $('canvasXScrollInner').style.width=(canvasW*zoom+44)+'px';
+ svg.setAttribute('viewBox',`0 0 ${canvasW} ${canvasH}`);
+ svg.setAttribute('width',canvasW);svg.setAttribute('height',canvasH);
+ $('canvasSizeLabel').textContent=`工作區　${canvasW} × ${canvasH}｜格線 24 × 24`;
+ $('zoomLabel').textContent=Math.round(zoom*100)+'%';
+}
+function ensureCanvasContains(x,y,w=0,h=0){
+ let changed=false;
+ while(x+w+GRID>canvasW){canvasW+=480;changed=true}
+ while(y+h+GRID>canvasH){canvasH+=480;changed=true}
+ if(changed)syncCanvasSize();
+}
+function extendCanvas(axis){
+ if(axis==='x')canvasW+=480;else canvasH+=480;
+ syncCanvasSize();render();
+ $('status').textContent=`畫布已延伸至 ${canvasW} × ${canvasH}`;
+}
+function snapshot(){undoStack.push(JSON.stringify(items));if(undoStack.length>80)undoStack.shift();redoStack=[]}
+function uid(){return 'o'+Math.random().toString(36).slice(2,10)}
+function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===t));$('modeLabel').textContent='目前工具：'+({select:'選取／移動',seat:'單一座位',rect:'矩形',roundRect:'圓角矩形',circle:'圓形',trapezoid:'梯形',diamond:'菱形',line:'直線',text:'文字標籤',stage:'舞台',seatblock:'座位區'}[t])}
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>setTool(b.dataset.tool));
+function add(type,x,y,w,h,text,fill='#6c9bc5',stroke='#315f86',extra={}){ensureCanvasContains(x,y,w,h);const o={id:uid(),type,x,y,w,h,text,fill,stroke,rotate:0,name:text||type,...extra};items.push(o);selected=o.id;selectedIds=new Set([o.id]);render();return o}
+function el(tag,attrs={}){const n=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));return n}
+function render(){
+ syncCanvasSize();svg.innerHTML='';
+ [...items].sort((a,b)=>{
+  // 圖層順序：區域外框在底層，排數文字在最上層，避免被相鄰座位圖形遮住而誤選座位。
+  const layer=o=>o.type==='blockBounds'?0:o.type==='rowlabel'?2:1;
+  return layer(a)-layer(b);
+ }).forEach(o=>{
+  const g=el('g',{class:'object'+(selectedIds.has(o.id)||o.id===selected?' selected':''),transform:`translate(${o.x} ${o.y}) rotate(${o.rotate||0} ${o.w/2} ${o.h/2})`,'data-id':o.id});
+  let shape;
+  if(o.type==='blockBounds'){shape=el('rect',{x:0,y:0,width:o.w,height:o.h,fill:'transparent',stroke:o.stroke,'stroke-width':2,'stroke-dasharray':'5 3',class:'shape'});g.append(shape)}
+  else if(o.type==='rowlabel'){
+   // 排數文字只保留自身範圍的透明命中區，不套用物件外框樣式。
+   // 避免選取框與八個縮放控制點伸入第一欄座位，干擾座位點選。
+   shape=el('rect',{x:-o.w,y:0,width:o.w,height:o.h,fill:'transparent',stroke:'none',class:'rowlabel-hit-area','pointer-events':'all'});
+   g.append(shape);
+   const align=o.textAlign||'end',textX=align==='start'?-o.w:align==='middle'?-o.w/2:0;
+   const t=el('text',{x:textX,y:Math.max(17,o.h*.72),'font-size':o.fontSize||14,'font-family':o.fontFamily||undefined,fill:o.fill,'font-weight':'700','text-anchor':align==='start'?'start':align==='middle'?'middle':'end','pointer-events':'all'});
+   t.textContent=o.text;g.append(t);
+   // 被選取的排數文字仍顯示橘色實線框；框線不攔截滑鼠，也不產生縮放控制點。
+   if(selectedIds.has(o.id)||o.id===selected){
+    g.append(el('rect',{x:-o.w,y:0,width:o.w,height:o.h,fill:'none',stroke:'#e8873d','stroke-width':1.8,class:'rowlabel-selection-outline','pointer-events':'none'}));
+   }
+  }
+  else if(o.type==='seat'){shape=el('rect',{x:0,y:0,width:o.w,height:o.h,rx:4,fill:o.fill,stroke:o.stroke,'stroke-width':1.3,class:'shape'});g.append(shape);const t=el('text',{x:o.w/2,y:o.h/2+4,'text-anchor':'middle','font-size':o.fontSize||Math.min(12,o.h*.48),'font-family':o.fontFamily||undefined,fill:o.textColor||'#ffffff','font-weight':'600'});t.textContent=o.text;g.append(t)}
+  else if(o.type==='line'){shape=el('line',{x1:0,y1:0,x2:o.w,y2:o.h,stroke:o.stroke,'stroke-width':3,class:'shape'});g.append(shape)}
+  else if(o.type==='roundRect'){shape=el('rect',{x:0,y:0,width:o.w,height:o.h,rx:Math.max(0,Math.min(Number(o.radius??12),Math.min(o.w,o.h)/2)),fill:o.fill,stroke:o.stroke,'stroke-width':2,class:'shape'});g.append(shape);if(o.text){const t=el('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||undefined,fill:'#fff','font-weight':'700'});t.textContent=o.text;g.append(t)}}
+   else if(o.type==='circle'){shape=el('ellipse',{cx:o.w/2,cy:o.h/2,rx:o.w/2,ry:o.h/2,fill:o.fill,stroke:o.stroke,'stroke-width':2,class:'shape'});g.append(shape);if(o.text){const t=el('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||undefined,fill:'#fff','font-weight':'700'});t.textContent=o.text;g.append(t)}}
+  else if(o.type==='trapezoid'){shape=el('polygon',{points:`${o.w*.2},0 ${o.w*.8},0 ${o.w},${o.h} 0,${o.h}`,fill:o.fill,stroke:o.stroke,'stroke-width':2,class:'shape'});g.append(shape);if(o.text){const t=el('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||undefined,fill:'#fff','font-weight':'700'});t.textContent=o.text;g.append(t)}}
+  else if(o.type==='diamond'){shape=el('polygon',{points:`${o.w/2},0 ${o.w},${o.h/2} ${o.w/2},${o.h} 0,${o.h/2}`,fill:o.fill,stroke:o.stroke,'stroke-width':2,class:'shape'});g.append(shape);if(o.text){const t=el('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||undefined,fill:'#fff','font-weight':'700'});t.textContent=o.text;g.append(t)}}
+  else if(o.type==='zoneLabel'||o.type==='text'){
+   const align=o.textAlign||(o.type==='zoneLabel'?'middle':'start'),textX=align==='start'?0:align==='middle'?o.w/2:o.w;
+   const t=el('text',{x:textX,y:Math.max(18,o.h*.72),'font-size':o.fontSize||(o.type==='zoneLabel'?Math.max(16,o.h*.65):Math.max(14,o.h*.65)),'font-family':o.fontFamily||undefined,fill:o.fill,'font-weight':'700','text-anchor':align==='start'?'start':align==='middle'?'middle':'end'});
+   t.textContent=o.text;g.append(t);
+   shape=el('rect',{x:0,y:0,width:o.w,height:o.h,fill:'transparent',stroke:'transparent',class:'shape'});g.insertBefore(shape,g.firstChild)
+  }
+  else {shape=el('rect',{x:0,y:0,width:o.w,height:o.h,rx:o.type==='stage'?3:1,fill:o.fill,stroke:o.stroke,'stroke-width':2,class:'shape'});g.append(shape);if(o.text){const t=el('text',{x:o.w/2,y:o.h/2+6,'text-anchor':'middle','font-size':o.fontSize||Math.min(22,o.h*.35),'font-family':o.fontFamily||undefined,'font-weight':'700',fill:'#fff'});t.textContent=o.text;g.append(t)}}
+  g.addEventListener('pointerdown',e=>onObjectDown(e,o));svg.append(g);
+ });
+ if(selected&&selectedIds.size<=1){
+  const o=items.find(x=>x.id===selected);
+  if(o&&o.type!=='blockBounds'&&o.type!=='rowlabel'){
+   const x=o.x,y=o.y,w=o.w,h=o.h;
+   const handles=[
+    ['nw',x,y],['n',x+w/2,y],['ne',x+w,y],
+    ['e',x+w,y+h/2],['se',x+w,y+h],['s',x+w/2,y+h],
+    ['sw',x,y+h],['w',x,y+h/2]
+   ];
+   handles.forEach(([dir,cx,cy])=>{
+    const handleRadius=o.type==='rowlabel'?4:6;
+    const dot=el('circle',{cx,cy,r:handleRadius,fill:'#fff',stroke:'#e8873d','stroke-width':2,class:'resize-handle','data-dir':dir});
+    dot.style.cursor=({nw:'nwse-resize',se:'nwse-resize',ne:'nesw-resize',sw:'nesw-resize',n:'ns-resize',s:'ns-resize',e:'ew-resize',w:'ew-resize'})[dir];
+    dot.addEventListener('pointerdown',e=>{
+     e.stopPropagation();e.preventDefault();snapshot();
+     resizeDrag={id:o.id,dir,start:point(e),orig:{x:o.x,y:o.y,w:o.w,h:o.h}};
+     svg.setPointerCapture(e.pointerId);
+    });
+    svg.append(dot);
+   });
+  }
+ }
+ updateProps();updateCellMarker();
+}
+function updateCellMarker(){
+ svg.querySelectorAll('.cell-marker,.grid-range-marker').forEach(n=>n.remove());
+ if(selectedCellRange){
+  svg.append(el('rect',{class:'grid-range-marker',x:selectedCellRange.x,y:selectedCellRange.y,width:selectedCellRange.w,height:selectedCellRange.h,fill:'#e8873d','fill-opacity':'0.10',stroke:'#d96b22','stroke-width':2,'stroke-dasharray':'6 3','pointer-events':'none'}));
+ }
+ if(selectedCell){
+  svg.append(el('rect',{class:'cell-marker',x:selectedCell.x,y:selectedCell.y,width:GRID,height:GRID,fill:'#f4a261','fill-opacity':'0.17',stroke:'#d96b22','stroke-width':2,'pointer-events':'none'}));
+ }
+ if(hoverCell&&(!selectedCell||hoverCell.x!==selectedCell.x||hoverCell.y!==selectedCell.y)){
+  svg.append(el('rect',{class:'cell-marker',x:hoverCell.x,y:hoverCell.y,width:GRID,height:GRID,fill:'#f4a261','fill-opacity':'0.08',stroke:'#e8873d','stroke-width':1.5,'stroke-dasharray':'4 2','pointer-events':'none'}));
+ }
+}
+function updateProps(){
+ const chosen=getSelectedObjects();
+ const o=items.find(x=>x.id===selected)||chosen[chosen.length-1];
+ $('emptyProps').hidden=!!o;$('props').hidden=!o;if(!o)return;
+ [['pName','name'],['pX','x'],['pY','y'],['pW','w'],['pH','h'],['pText','text'],['pFill','fill'],['pStroke','stroke'],['pRotate','rotate']].forEach(([id,k])=>$(id).value=o[k]??'');
+ const fontTargets=[];
+ chosen.forEach(item=>{
+  if(item.type==='blockBounds'&&item.groupId)fontTargets.push(...items.filter(x=>x.groupId===item.groupId&&x.type==='seat'));
+  else if(item.type!=='line')fontTargets.push(item);
+ });
+ const fontSource=fontTargets[fontTargets.length-1]||o;
+ $('pFontSize').value=fontSource.fontSize??(fontSource.type==='seat'?12:fontSource.type==='zoneLabel'?16:fontSource.type==='text'?14:14);
+ $('pFontFamily').value=fontSource.fontFamily||"system-ui,-apple-system,'Noto Sans TC',sans-serif";
+  const alignTargets=chosen.filter(item=>['text','rowlabel','zoneLabel'].includes(item.type));
+  $('textAlignField').hidden=alignTargets.length===0;
+  $('pTextAlign').value=fontSource.textAlign||(fontSource.type==='rowlabel'?'end':fontSource.type==='zoneLabel'?'middle':'start');
+ if(o.type==='blockBounds'){const firstSeat=items.find(x=>x.groupId===o.groupId&&x.type==='seat');if(firstSeat){$('pFill').value=firstSeat.fill;$('pStroke').value=firstSeat.stroke||lastStrokeColor;}}
+ const seatColorTargets=[];
+ chosen.forEach(item=>{if(item.type==='seat')seatColorTargets.push(item);else if(item.type==='blockBounds'&&item.groupId)seatColorTargets.push(...items.filter(x=>x.groupId===item.groupId&&x.type==='seat'));});
+ $('seatTextColorField').hidden=seatColorTargets.length===0;
+ $('pTextColor').value=(seatColorTargets[seatColorTargets.length-1]?.textColor)||'#ffffff';
+ // 選取既有物件時，也把它的顏色設為下一個新元件的預設色
+ if(/^#[0-9a-fA-F]{6}$/.test($('pFill').value))lastFillColor=$('pFill').value;
+ if(/^#[0-9a-fA-F]{6}$/.test($('pStroke').value))lastStrokeColor=$('pStroke').value;
+ $('pFillHex').value=$('pFill').value||'#000000';
+  $('radiusField').hidden=!(chosen.length===1&&o.type==='roundRect');
+  $('pRadius').value=o.type==='roundRect'?(o.radius??12):12;
+ $('pText').disabled=chosen.length!==1||o.type==='blockBounds';
+ if(chosen.length>1){$('pName').value=`已選取 ${chosen.length} 個物件`;$('pName').disabled=true;$('pText').value='';}
+ else $('pName').disabled=false;
+}
+ $('pTextAlign').addEventListener('change',()=>{
+  const chosen=getSelectedObjects().filter(o=>['text','rowlabel','zoneLabel'].includes(o.type));
+  if(!chosen.length)return;
+  snapshot();chosen.forEach(o=>o.textAlign=$('pTextAlign').value);render();
+ });
+ [['pFontSize','fontSize'],['pFontFamily','fontFamily']].forEach(([id,k])=>$(id).addEventListener('change',()=>{
+ const chosen=getSelectedObjects();if(!chosen.length)return;snapshot();
+ const value=k==='fontSize'?Math.max(6,Math.min(120,Number($(id).value)||14)):$(id).value;
+ const targets=new Set();
+ chosen.forEach(o=>{
+  if(o.type==='blockBounds'&&o.groupId)items.filter(x=>x.groupId===o.groupId&&x.type==='seat').forEach(x=>targets.add(x));
+  else if(o.type!=='line'&&o.type!=='blockBounds')targets.add(o);
+ });
+ targets.forEach(o=>o[k]=value);
+ render();
+}));
+[['pName','name'],['pText','text'],['pFill','fill'],['pStroke','stroke'],['pX','x'],['pY','y'],['pW','w'],['pH','h'],['pRotate','rotate']].forEach(([id,k])=>$(id).addEventListener('change',()=>{
+ const chosen=getSelectedObjects();if(!chosen.length)return;
+ const value=['x','y','w','h','rotate'].includes(k)?Number($(id).value):$(id).value;
+ if(k==='fill'&&/^#[0-9a-fA-F]{6}$/.test(value))lastFillColor=value;
+ if(k==='stroke'&&/^#[0-9a-fA-F]{6}$/.test(value))lastStrokeColor=value;
+ snapshot();
+ if(k==='fill'||k==='stroke'){
+  const targets=new Set();
+  chosen.forEach(o=>{
+   if(o.type==='blockBounds'&&o.groupId){
+    if(k==='fill')items.filter(x=>x.groupId===o.groupId&&x.type==='seat').forEach(x=>targets.add(x));
+    else targets.add(o);
+   }else if(o.type!=='line')targets.add(o);
+  });
+  targets.forEach(target=>target[k]=value);
+ }else if(chosen.length===1){
+  const o=chosen[0];
+  if(o.type==='blockBounds'&&k==='text'){o.text=value;items.filter(x=>x.groupId===o.groupId&&x.type==='zoneLabel').forEach(label=>label.text=value);}
+  else o[k]=value;
+ }
+ render();
+}));
+$('pTextColor').addEventListener('change',()=>{
+ const chosen=getSelectedObjects();if(!chosen.length)return;
+ const targets=new Set();
+ chosen.forEach(o=>{if(o.type==='seat')targets.add(o);else if(o.type==='blockBounds'&&o.groupId)items.filter(x=>x.groupId===o.groupId&&x.type==='seat').forEach(x=>targets.add(x));});
+ if(!targets.size)return;snapshot();targets.forEach(seat=>seat.textColor=$('pTextColor').value);render();
+});
+$('pFill').addEventListener('input',()=>{$('pFillHex').value=$('pFill').value.toLowerCase()});
+$('pRadius').addEventListener('change',()=>{
+  const chosen=getSelectedObjects();
+  if(chosen.length!==1||chosen[0].type!=='roundRect')return;
+  const o=chosen[0],value=Math.max(0,Math.min(200,Number($('pRadius').value)||0));
+  snapshot();o.radius=Math.min(value,Math.min(o.w,o.h)/2);render();
+});
+$('pFillHex').addEventListener('change',()=>{
+ const value=$('pFillHex').value.trim();
+ if(!/^#[0-9a-fA-F]{6}$/.test(value)){alert('請輸入完整 HEX 色碼，例如 #FF8800');$('pFillHex').value=$('pFill').value;return}
+ $('pFill').value=value;
+ $('pFill').dispatchEvent(new Event('change',{bubbles:true}));
+});
+function point(e){const r=svg.getBoundingClientRect();return{x:(e.clientX-r.left)*canvasW/r.width,y:(e.clientY-r.top)*canvasH/r.height}}
+function onObjectDown(e,o){
+ if(tool==='seatblock'){return}
+ e.stopPropagation();
+ if(tool!=='select')return;
+ // 物件選取與座位格游標分開管理：點到座位時以該座位定位；
+ // 點到排數文字或其他非座位物件時，清除舊格子位置，避免沿用上一格。
+ keyboardSeatRange=null;selectedCellRange=null;
+ if(o.type==='seat'){
+  selectedCell={x:snap(o.x),y:snap(o.y)};
+  hoverCell=null;
+ }else{
+  selectedCell=null;
+  hoverCell=null;
+ }
+ if(e.shiftKey){
+  if(!selectionAnchorId)selectionAnchorId=selected||o.id;
+  selectionDrag={start:point(e),current:point(e),clickedId:o.id,moved:false};
+  svg.setPointerCapture(e.pointerId);
+  $('status').textContent='按住 Shift 拖曳可框選範圍；Shift 單擊可逐一多選';
+  return;
+ }
+ if(e.ctrlKey||e.metaKey){
+  if(selectedIds.has(o.id)){selectedIds.delete(o.id);if(selected===o.id)selected=[...selectedIds].pop()||null}
+  else{selectedIds.add(o.id);selected=o.id}
+  render();$('status').textContent=`已選取 ${selectedIds.size} 個物件`;return;
+ }
+ if(o.type==='blockBounds'&&o.groupId){
+  const members=items.filter(item=>item.groupId===o.groupId);
+  selectedIds=new Set(members.map(item=>item.id));selected=o.id;selectionAnchorId=o.id;
+ }else if(!selectedIds.has(o.id)||selectedIds.size<=1){
+  selected=o.id;selectedIds=new Set([o.id]);selectionAnchorId=o.id;
+ }else selected=o.id;
+ snapshot();
+ const moving=items.filter(item=>selectedIds.has(item.id)).map(item=>({id:item.id,x:item.x,y:item.y}));
+ drag={ids:moving,start:point(e)};render();svg.setPointerCapture(e.pointerId)
+}
+svg.addEventListener('pointermove',e=>{
+ const p=point(e);
+ if(selectionDrag){
+  selectionDrag.current=p;
+  const dx=p.x-selectionDrag.start.x,dy=p.y-selectionDrag.start.y;
+  if(Math.hypot(dx,dy)>4)selectionDrag.moved=true;
+  if(selectionDrag.moved){
+   let box=svg.querySelector('.selection-box');
+   if(!box){box=el('rect',{class:'selection-box',fill:'#e8873d','fill-opacity':'.12',stroke:'#e8873d','stroke-width':1.5,'stroke-dasharray':'5 3','pointer-events':'none'});svg.append(box)}
+   const x=Math.min(selectionDrag.start.x,p.x),y=Math.min(selectionDrag.start.y,p.y),w=Math.abs(dx),h=Math.abs(dy);
+   box.setAttribute('x',x);box.setAttribute('y',y);box.setAttribute('width',w);box.setAttribute('height',h);
+  }
+  return;
+ }
+ if(resizeDrag){
+  const o=items.find(x=>x.id===resizeDrag.id);
+  if(!o)return;
+  const dx=p.x-resizeDrag.start.x,dy=p.y-resizeDrag.start.y,orig=resizeDrag.orig,dir=resizeDrag.dir;
+  let x=orig.x,y=orig.y,w=orig.w,h=orig.h;
+  if(dir.includes('e'))w=Math.max(12,snap(orig.w+dx));
+  if(dir.includes('s'))h=Math.max(12,snap(orig.h+dy));
+  if(dir.includes('w')){w=Math.max(12,snap(orig.w-dx));x=orig.x+orig.w-w}
+  if(dir.includes('n')){h=Math.max(12,snap(orig.h-dy));y=orig.y+orig.h-h}
+  o.x=x;o.y=y;o.w=w;o.h=h;
+  ensureCanvasContains(o.x,o.y,o.w,o.h);render();return;
+ }
+ if(drag){
+  const dx=p.x-drag.start.x,dy=p.y-drag.start.y;
+  drag.ids.forEach(origin=>{
+   const o=items.find(x=>x.id===origin.id);
+   if(o){o.x=snap(origin.x+dx);o.y=snap(origin.y+dy);ensureCanvasContains(o.x,o.y,o.w,o.h);}
+  });
+  render();return;
+ }
+ hoverCell=cellAt(p);updateCellMarker();
+});
+svg.addEventListener('pointerleave',()=>{hoverCell=null;updateCellMarker()});
+svg.addEventListener('pointerup',()=>{
+ if(selectionDrag){
+  const state=selectionDrag;
+  if(state.moved){
+   const a=state.start,b=state.current;
+   // 框選範圍依滑鼠實際拖曳位置計算，不再額外擴大一整格。
+   const x1=Math.min(a.x,b.x),y1=Math.min(a.y,b.y),x2=Math.max(a.x,b.x),y2=Math.max(a.y,b.y);
+   if(state.gridRange){
+    selectedCellRange={x:x1,y:y1,w:Math.max(GRID,x2-x1),h:Math.max(GRID,y2-y1)};selectedCell={x:x1,y:y1};selected=null;selectedIds.clear();selectionAnchorId=null;
+    $('status').textContent=`已選取空白格範圍：${selectedCellRange.w/GRID} 欄 × ${selectedCellRange.h/GRID} 列；刪除方向決定刪除欄或列`;
+   }else{
+    // 只有與框選矩形有實際面積交集的物件才會被選取，邊界相碰不算。
+    const picked=items.filter(o=>o.x<x2&&o.x+o.w>x1&&o.y<y2&&o.y+o.h>y1);
+    if(!state.additive)selectedIds.clear();picked.forEach(o=>selectedIds.add(o.id));if(picked.length)selected=picked[picked.length-1].id;if(!selectionAnchorId&&picked.length)selectionAnchorId=picked[0].id;
+   }
+  }else if(state.clickedId){
+   if(selectedIds.has(state.clickedId)){selectedIds.delete(state.clickedId);if(selected===state.clickedId)selected=[...selectedIds].pop()||null}
+   else{selectedIds.add(state.clickedId);selected=state.clickedId}
+   if(!selectionAnchorId)selectionAnchorId=state.clickedId;
+  }
+  selectionDrag=null;svg.querySelector('.selection-box')?.remove();render();$('status').textContent=`已選取 ${selectedIds.size} 個物件`;
+ }
+ if(resizeDrag){resizeDrag=null;$('status').textContent='尺寸已調整'}
+ if(drag){drag=null;$('status').textContent='位置已更新'}
+});
+svg.addEventListener('pointerdown',e=>{
+ if(tool!=='seatblock'&&e.target!==svg)return;
+ const p=point(e),cell=cellAt(p);
+ if(tool==='select'){
+  selectionDrag={start:p,current:p,clickedId:null,moved:false,additive:e.shiftKey||e.ctrlKey||e.metaKey,gridRange:!!e.shiftKey};
+  if(!selectionDrag.additive){selected=null;selectedIds.clear();selectionAnchorId=null;selectedCellRange=null;}
+  selectedCell=cell;hoverCell=cell;keyboardSeatRange=null;
+  svg.setPointerCapture(e.pointerId);
+  $('status').textContent='拖曳滑鼠框選物件；框選可同時包含座位、排數與區域文字';
+  return;
+ }
+ if(tool==='seatblock'){
+  selectedCell=cell;
+  createSeatBlockAt(cell.x,cell.y);
+  $('status').textContent=`已在指定格子（X:${cell.x}、Y:${cell.y}）建立座位區`;
+  setTool('select');return;
+ }
+ snapshot();
+ if(tool==='seat')add('seat',cell.x,cell.y,24,24,$('seatStart').value||'1',lastFillColor,lastStrokeColor);
+ if(tool==='rect')add('rect',snap(p.x),snap(p.y),144,96,'',lastFillColor,lastStrokeColor);
+  if(tool==='roundRect')add('roundRect',snap(p.x),snap(p.y),144,96,'',lastFillColor,lastStrokeColor,{radius:12});
+ if(tool==='circle')add('circle',snap(p.x),snap(p.y),96,96,'',lastFillColor,lastStrokeColor);
+ if(tool==='trapezoid')add('trapezoid',snap(p.x),snap(p.y),144,96,'',lastFillColor,lastStrokeColor);
+ if(tool==='diamond')add('diamond',snap(p.x),snap(p.y),96,96,'',lastFillColor,lastStrokeColor);
+ if(tool==='line')add('line',snap(p.x),snap(p.y),144,0,'','none',lastStrokeColor);
+ if(tool==='stage')add('stage',snap(p.x-108),snap(p.y-36),216,72,'STAGE',lastFillColor,lastStrokeColor);
+ if(tool==='text'){const v=prompt('請輸入文字','區域名稱');if(v)add('text',snap(p.x),snap(p.y),192,24,v,lastFillColor,lastStrokeColor)}
+ setTool('select');
+});
+function formatNumber(n){return $('padZero')?.checked?String(n).padStart(2,'0'):String(n)}
+function createSeatBlockAt(originX,originY){
+ const rowStart=Number($('rowStart').value),rowEnd=Number($('rowEnd').value);
+ const seatStart=Number($('seatStart').value),seatEnd=Number($('seatEnd').value);
+ if(!Number.isInteger(rowStart)||!Number.isInteger(rowEnd)||rowEnd<rowStart){
+  alert('排數結尾必須大於或等於排數起始，且兩者都要是整數。');return;
+ }
+ if(!Number.isInteger(seatStart)||!Number.isInteger(seatEnd)||seatEnd<seatStart){
+  alert('座號結尾必須大於或等於座號起始，且兩者都要是整數。');return;
+ }
+ const rows=rowEnd-rowStart+1;
+ const mode=$('numberingMode').value;
+ let seatNumbers=Array.from({length:seatEnd-seatStart+1},(_,i)=>seatStart+i);
+ if(mode==='odd')seatNumbers=seatNumbers.filter(n=>Math.abs(n%2)===1);
+ if(mode==='even')seatNumbers=seatNumbers.filter(n=>n%2===0);
+ if(!seatNumbers.length){alert('你設定的座號範圍內沒有符合所選方式的號碼。');return}
+ const cols=seatNumbers.length;
+ if(rows>80||cols>100){alert('目前最多建立 80 排、每排 100 個座位。');return}
+ const sx=Math.max(GRID,snap(+$('gapX').value||GRID));
+ const sy=Math.max(GRID,snap(+$('gapY').value||GRID));
+ const name=$('blockName').value||'座位區';
+ let baseX=Math.max(48,Math.floor(originX/GRID)*GRID),baseY=Math.max(0,Math.floor(originY/GRID)*GRID);
+ ensureCanvasContains(baseX-48,baseY,cols*sx,rows*sy);
+ const direction=$('numberDirection').value;
+ if(direction==='rtl')seatNumbers.reverse();
+ const groupId=uid();
+ snapshot();
+ for(let r=0;r<rows;r++){
+  const rowNumber=rowStart+r;
+  items.push({id:uid(),groupId,type:'rowlabel',x:baseX-48,y:baseY+r*sy,w:24,h:24,text:formatNumber(rowNumber),fill:lastFillColor,stroke:'none',rotate:0,name:`${name} 第 ${rowNumber} 排`});
+  seatNumbers.forEach((number,c)=>{
+   const label=formatNumber(number);
+   items.push({id:uid(),groupId,type:'seat',x:baseX+c*sx,y:baseY+r*sy,w:24,h:24,text:label,fill:lastFillColor,stroke:lastStrokeColor,rotate:0,name:`${name} ${rowNumber}排 ${label}號`});
+  });
+ }
+ const zoneWidth=Math.max(96,name.length*22+24);
+ const labelY=$('zoneLabelPosition').value==='bottom'?baseY+rows*sy+6:Math.max(0,baseY-42);
+ const zoneLabel={id:uid(),groupId,type:'zoneLabel',x:baseX+(cols*sx-zoneWidth)/2,y:labelY,w:zoneWidth,h:30,text:name,fill:lastFillColor,stroke:'none',rotate:0,name:`${name} 區域名稱`};
+ const bounds={id:uid(),groupId,type:'blockBounds',x:baseX-12,y:baseY-12,w:cols*sx+24,h:rows*sy+24,text:name,fill:'transparent',stroke:'#8aa3b8',rotate:0,name:name};
+ items.push(zoneLabel,bounds);selected=bounds.id;render();
+ $('status').textContent=`已建立第 ${rowStart}～${rowEnd} 排、座號 ${seatNumbers[0]}～${seatNumbers[seatNumbers.length-1]}，${mode==='odd'?'連續奇數':mode==='even'?'連續偶數':'連續號碼'}，共 ${rows} 排 × ${cols} 個座位`;
+}
+$('createBlock').onclick=()=>{
+ const origin=selectedCell||{x:192,y:192};
+ createSeatBlockAt(origin.x,origin.y);
+ $('status').textContent=selectedCell
+  ? `已在選取格子（X:${origin.x}、Y:${origin.y}）建立座位區`
+  : '已在預設位置建立座位區';
+};
+
+function getActiveSeatGroup(){
+ const chosen=getSelectedObjects();
+ let groupItem=chosen.find(o=>o.groupId);
+ if(!groupItem&&selected)groupItem=items.find(o=>o.id===selected&&o.groupId);
+ return groupItem?.groupId||null;
+}
+function renumberGroup(groupId,record=true){
+ const group=items.filter(o=>o.groupId===groupId);
+ const seats=group.filter(o=>o.type==='seat');
+ const labels=group.filter(o=>o.type==='rowlabel');
+ if(!seats.length){alert('找不到這個座位區的座位。');return false}
+ const rowStart=Number($('rowStart').value);
+ const seatStart=Number($('seatStart').value);
+ if(!Number.isInteger(rowStart)||!Number.isInteger(seatStart)){alert('排數與座號起始值必須是整數。');return false}
+ const mode=$('numberingMode').value;
+ const rowYs=[...new Set(seats.map(o=>o.y))].sort((a,b)=>a-b);
+ const seatXs=[...new Set(seats.map(o=>o.x))].sort((a,b)=>a-b);
+ let nums=Array.from({length:seatXs.length},(_,i)=>seatStart+i);
+ if(mode==='odd')nums=nums.filter(n=>Math.abs(n%2)===1);
+ if(mode==='even')nums=nums.filter(n=>n%2===0);
+ if(nums.length<seatXs.length){alert('目前座號起始值產生的號碼不足以填滿每一排，請調整座號起始值或生成方式。');return false}
+ if($('numberDirection').value==='rtl')nums.reverse();
+ if(record)snapshot();
+ rowYs.forEach((y,r)=>{
+  const rowNo=rowStart+r;
+  const rowLabel=labels.find(o=>Math.abs(o.y-y)<2);
+  if(rowLabel){rowLabel.text=formatNumber(rowNo);rowLabel.name=`第 ${rowNo} 排`}
+  seats.filter(o=>Math.abs(o.y-y)<2).sort((a,b)=>a.x-b.x).forEach((seat,c)=>{
+   seat.text=formatNumber(nums[c]);
+   seat.name=`${rowNo}排 ${seat.text}號`;
+  });
+ });
+ render();
+ $('status').textContent=`已重新編號：${rowYs.length} 排 × ${seatXs.length} 個座位`;
+ return true;
+}
+$('renumberBlock').onclick=()=>{
+ const groupId=getActiveSeatGroup();
+ if(!groupId){alert('請先選取座位區外框或其中一個座位。');return}
+ renumberGroup(groupId,true);
+};
+function applyCanvasGridChange(mode){
+ const count=Math.max(1,Math.min(30,Math.floor(Number($('insertCount').value)||1)));
+ const dir=$('insertDirection').value;
+ const type=$('insertType')?.value||'column';
+ if(!selectedCell){alert('請先點選畫布上的任意格子，或用方向鍵移動橘色格子游標。');return}
+ if(mode==='insert'&&type==='cell'){
+  const horizontal=dir==='left'||dir==='right';
+  const axis=horizontal?'x':'y';
+  const cross=horizontal?'y':'x';
+  const threshold=selectedCell[axis];
+  const bandStart=selectedCell[cross],bandEnd=bandStart+GRID;
+  const shift=dir==='right'||dir==='down'?GRID:-GRID;
+  snapshot();
+  let moved=0;
+  items.forEach(o=>{
+   const start=Number(o[axis])||0;
+   const crossStart=Number(o[cross])||0;
+   const crossSize=Math.max(1,Number(o[horizontal?'h':'w'])||1);
+   const center=crossStart+crossSize/2;
+   const inBand=center>=bandStart&&center<bandEnd;
+   const eligible=dir==='right'||dir==='down'?start>=threshold-1:start<threshold+GRID-1;
+   if(inBand&&eligible){o[axis]=start+shift;moved++}
+  });
+  $('status').textContent=`已插入單格（${({left:'向左',right:'向右',up:'向上',down:'向下'})[dir]}），同列／同行內容已推移`;
+ }else{
+  const horizontal=type==='column'?true:type==='row'?false:(dir==='left'||dir==='right');
+  const axis=horizontal?'x':'y';
+  const sizeKey=horizontal?'w':'h';
+  const lineCount=mode==='insert'?count:count;
+  const delta=lineCount*GRID;
+  const range=mode==='delete'?selectedCellRange:null;
+  const rangeStart=range?(horizontal?range.x:range.y):null;
+  const rangeExtent=range?(horizontal?range.w:range.h):null;
+  const available=horizontal?canvasW:canvasH;
+  const effectiveCount=range?Math.max(1,Math.min(Math.round(rangeExtent/GRID),Math.floor((available-rangeStart)/GRID))):count;
+  const at=mode==='insert'?(horizontal?selectedCell.x+(dir==='right'?GRID:0):selectedCell.y+(dir==='down'?GRID:0)):(range?(horizontal?range.x:range.y):(horizontal?selectedCell.x:selectedCell.y));
+  snapshot();
+  if(mode==='insert'){
+   items.forEach(o=>{
+    const start=Number(o[axis])||0;
+    const size=Math.max(0,Number(o[sizeKey])||0);
+    if(start>=at-1)o[axis]=start+delta;
+    else if(start+size>at+1)o[sizeKey]=size+delta;
+   });
+   $('status').textContent=`已插入 ${count} 個空白${horizontal?'欄':'列'}（${dir==='left'?'左側':dir==='right'?'右側':dir==='up'?'上方':'下方'}）`;
+  }else{
+   const deleteDelta=effectiveCount*GRID;
+   const end=at+deleteDelta;
+   const kept=[];
+   items.forEach(o=>{
+    const start=Number(o[axis])||0;
+    const size=Math.max(0,Number(o[sizeKey])||0);
+    const finish=start+size;
+    if(size===0){if(start>=at&&start<end)return;if(start>=end)o[axis]=start-deleteDelta;kept.push(o);return}
+    if(finish<=at+1){kept.push(o);return}
+    if(start>=end-1){o[axis]=start-deleteDelta;kept.push(o);return}
+    const overlap=Math.max(0,Math.min(finish,end)-Math.max(start,at));
+    const newSize=size-overlap;
+    if(newSize<=1)return;
+    if(start>=at)o[axis]=at;
+    o[sizeKey]=newSize;
+    kept.push(o);
+   });
+   items=kept;
+   // 刪除畫布格線本身，讓工作區尺寸同步縮小，而不只是移動物件
+   if(horizontal)canvasW=Math.max(GRID,canvasW-deleteDelta);
+   else canvasH=Math.max(GRID,canvasH-deleteDelta);
+   syncCanvasSize();
+   $('status').textContent=`已刪除選取範圍的 ${effectiveCount} 個畫布${horizontal?'欄':'列'}；工作區已縮小 ${deleteDelta}px，範圍內物件已移除`; 
+  }
+ }
+ selected=null;selectedIds.clear();selectionAnchorId=null;selectedCellRange=null;
+ render();
+}
+$('insertType')?.addEventListener('change',()=>{
+ const type=$('insertType').value,dir=$('insertDirection');
+ [...dir.options].forEach(o=>{o.disabled=(type==='column'&&(o.value==='up'||o.value==='down'))||(type==='row'&&(o.value==='left'||o.value==='right'))});
+ if(dir.selectedOptions[0]?.disabled)dir.value=type==='column'?'right':type==='row'?'down':'right';
+});
+$('insertSeats').onclick=()=>applyCanvasGridChange('insert');
+$('deleteGridLines').onclick=()=>{
+ if(!confirm('確定刪除目前選取位置的欄／列？該範圍內的物件或座位也會一併刪除。'))return;
+ applyCanvasGridChange('delete');
+};
+async function exportPng(){
+ const title=$('pngTitle').value.trim()||'座位表';
+ const watermark='@hanaandone.stu';
+ const opacity=Math.max(0.05,Math.min(.5,Number($('pngWatermarkOpacity').value)/100));
+ const cloneSvg=svg.cloneNode(true);
+ cloneSvg.querySelectorAll('.resize-handle,.selection-box,.cell-marker,.selection-marker').forEach(n=>n.remove());
+ // blockBounds 僅供編輯選取，正式 PNG 不輸出虛線框
+ cloneSvg.querySelectorAll('.object').forEach(n=>{const item=items.find(o=>o.id===n.getAttribute('data-id'));if(item?.type==='blockBounds')n.remove()});
+ cloneSvg.querySelectorAll('.object').forEach(n=>n.classList.remove('selected'));
+ cloneSvg.setAttribute('xmlns',NS);cloneSvg.setAttribute('width',canvasW);cloneSvg.setAttribute('height',canvasH);
+ cloneSvg.setAttribute('viewBox',`0 0 ${canvasW} ${canvasH}`);
+ const svgText=new XMLSerializer().serializeToString(cloneSvg);
+ const blob=new Blob([svgText],{type:'image/svg+xml;charset=utf-8'});
+ const url=URL.createObjectURL(blob);
+ const image=new Image();
+ image.onload=()=>{
+  const scale=2,titleH=title?100:24;
+  const canvas=document.createElement('canvas');
+  canvas.width=canvasW*scale;canvas.height=(canvasH+titleH)*scale;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+  if(title){
+   ctx.fillStyle='#24384d';ctx.textAlign='center';ctx.textBaseline='middle';
+   ctx.font=`bold ${30*scale}px "Noto Sans TC", "Microsoft JhengHei", sans-serif`;
+   ctx.fillText(title,canvas.width/2,50*scale,canvas.width-80*scale);
+  }
+  ctx.drawImage(image,0,titleH*scale,canvasW*scale,canvasH*scale);
+  if(watermark){
+   ctx.save();ctx.globalAlpha=opacity;ctx.fillStyle='#26384a';ctx.textAlign='center';ctx.textBaseline='middle';
+   // 字體縮小，並依照實際文字寬度計算水平間距，避免長文字彼此重疊。
+   const watermarkFontSize=Math.max(16,canvasW/52);
+   ctx.font=`bold ${watermarkFontSize*scale}px "Noto Sans TC", "Microsoft JhengHei", sans-serif`;
+   const textWidth=ctx.measureText(watermark).width;
+   ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(-Math.PI/6);
+   // 縮短列距以增加浮水印排數；每列交錯排列，維持均勻覆蓋。
+   const stepX=(textWidth+watermarkFontSize*1.25*scale);
+   const stepY=watermarkFontSize*3.35*scale;
+   let row=0;
+   for(let y=-canvas.height*1.5;y<canvas.height*1.5;y+=stepY){
+    const offset=(row%2)*stepX/2;
+    for(let x=-canvas.width*1.5-stepX;x<canvas.width*1.5+stepX;x+=stepX)ctx.fillText(watermark,x+offset,y);
+    row++;
+   }
+   ctx.restore();
+  }
+  canvas.toBlob(png=>{if(png)download(png,'座位表.png');else alert('PNG 匯出失敗，請再試一次。');URL.revokeObjectURL(url)},'image/png');
+ };
+ image.onerror=()=>{URL.revokeObjectURL(url);alert('無法產生 PNG，請檢查圖面內容後再試一次。')};
+ image.src=url;
+}
+$('exportPng').onclick=exportPng;
+
+$('delete').onclick=()=>{
+ const ids=new Set(selectedIds);if(selected)ids.add(selected);if(!ids.size)return;snapshot();
+ const groups=new Set(items.filter(o=>ids.has(o.id)&&o.type==='blockBounds'&&o.groupId).map(o=>o.groupId));
+ items=items.filter(o=>!ids.has(o.id)&&!(o.groupId&&groups.has(o.groupId)));
+ selected=null;selectedIds.clear();render()
+};
+$('duplicate').onclick=()=>{const o=items.find(x=>x.id===selected);if(!o)return;snapshot();const c=clone(o);c.id=uid();c.x+=25;c.y+=25;c.name+=' 副本';items.push(c);selected=c.id;render()};
+$('front').onclick=()=>{const i=items.findIndex(x=>x.id===selected);if(i<0)return;snapshot();items.push(items.splice(i,1)[0]);render()};
+$('clearAll').onclick=()=>{if(!confirm('確定清空整張畫布？'))return;snapshot();items=[];selected=null;selectedIds.clear();render()};
+$('toggleGrid').onclick=()=>{grid=!grid;$('stage').style.backgroundImage=grid?'linear-gradient(#e8edf2 1px,transparent 1px),linear-gradient(90deg,#e8edf2 1px,transparent 1px)':'none'};
+function setZoom(next){
+ const wrap=$('canvasWrap'),old=zoom;
+ const centerX=(wrap.scrollLeft+wrap.clientWidth/2)/old;
+ const centerY=(wrap.scrollTop+wrap.clientHeight/2)/old;
+ zoom=Math.max(.2,Math.min(3,next));syncCanvasSize();
+ wrap.scrollLeft=Math.max(0,centerX*zoom-wrap.clientWidth/2);
+ wrap.scrollTop=Math.max(0,centerY*zoom-wrap.clientHeight/2);
+ $('canvasXScroll').scrollLeft=wrap.scrollLeft;
+}
+$('zoomIn').onclick=()=>setZoom(zoom+.1);
+$('zoomOut').onclick=()=>setZoom(zoom-.1);
+$('zoomFit').onclick=()=>{
+ const wrap=$('canvasWrap'),availableW=Math.max(200,wrap.clientWidth-44),availableH=Math.max(200,wrap.clientHeight-44);
+ setZoom(Math.min(1,availableW/canvasW,availableH/canvasH));
+ wrap.scrollTo({top:0,left:0,behavior:'smooth'});$('canvasXScroll').scrollLeft=0;
+};
+$('canvasXScroll').addEventListener('scroll',()=>{if(Math.abs($('canvasWrap').scrollLeft-$('canvasXScroll').scrollLeft)>1)$('canvasWrap').scrollLeft=$('canvasXScroll').scrollLeft});
+$('canvasWrap').addEventListener('scroll',()=>{if(Math.abs($('canvasXScroll').scrollLeft-$('canvasWrap').scrollLeft)>1)$('canvasXScroll').scrollLeft=$('canvasWrap').scrollLeft});
+$('extendRight').onclick=()=>extendCanvas('x');
+$('extendDown').onclick=()=>extendCanvas('y');
+$('extendRight').onclick=()=>extendCanvas('x');
+$('extendDown').onclick=()=>extendCanvas('y');
+$('undo').onclick=()=>{if(!undoStack.length)return;redoStack.push(JSON.stringify(items));items=JSON.parse(undoStack.pop());selected=null;selectedIds.clear();render()};
+$('redo').onclick=()=>{if(!redoStack.length)return;undoStack.push(JSON.stringify(items));items=JSON.parse(redoStack.pop());selected=null;selectedIds.clear();render()};
+$('save').onclick=()=>{const blob=new Blob([JSON.stringify({version:2,items,canvasW,canvasH},null,2)],{type:'application/json'});download(blob,'座位表專案.json')};
+$('load').onclick=()=>$('fileInput').click();
+$('fileInput').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data.items))throw Error();snapshot();items=data.items.map(o=>o.type==='rowlabel'?{...o,w:24,h:24}:o);canvasW=Math.max(1400,Number(data.canvasW)||1400);canvasH=Math.max(900,Number(data.canvasH)||900);selected=null;selectedIds.clear();selectedCell=null;render();$('status').textContent='專案載入完成'}catch{alert('檔案格式不正確')}e.target.value=''};
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$('export').onclick=()=>{
+ const exportItems=items.filter(o=>o.type!=='blockBounds');
+ const data=JSON.stringify(exportItems).replace(/</g,'\\u003c');
+ const exportW=canvasW,exportH=canvasH;
+ const title=$('pngTitle').value.trim()||'座位表';
+ const safeTitle=title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ const out=`<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title>
+<style>
+ :root{--ink:#171717;--yellow:#ffc64a;--orange:#f5a52f;--paper:#fffdf9;--white:#fff;--muted:#8b877f;--line:#eee8dc;--cream:#fff8e9;--blue:#254968}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+.header{max-width:1160px;margin:0 auto;padding:32px 30px 24px;text-align:left;border:0;background:transparent;color:var(--ink)}
+.header:before{content:"HANA & ONE  /  CONCERT SEAT ARCHIVE";display:block;font:700 10px/1.5 "Helvetica Neue",Arial,sans-serif;letter-spacing:.2em;color:var(--muted);margin-bottom:16px}
+.header h1{font-size:clamp(23px,3.4vw,38px);line-height:1.25;letter-spacing:.01em;margin:0;font-weight:900;max-width:980px}
+.header:after{content:"SEAT PLAN  ·  FIND YOUR VIEW";display:block;margin-top:13px;font:600 11px "Helvetica Neue",Arial,sans-serif;letter-spacing:.15em;color:#a17a36}
+.panel{max-width:1100px;margin:0 auto 24px;padding:25px 28px 23px;background:var(--white);border:1px solid var(--line);border-radius:20px;box-shadow:0 8px 28px rgba(55,43,20,.035)}
+.panel:before{content:"FIND YOUR SEAT";display:block;font:700 10px "Helvetica Neue",Arial,sans-serif;letter-spacing:.2em;color:#a17a36;margin-bottom:17px}
+.searchrow{display:grid;grid-template-columns:1.2fr 1fr 1fr auto auto;gap:10px;align-items:end}
+.field{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:#665f54;letter-spacing:.02em}
+.field input,.field select{width:100%;min-width:0;padding:12px 13px;border:1px solid var(--line);border-radius:9px;font:inherit;font-weight:400;color:var(--ink);background:#fffdf9;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input:focus,.field select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(245,165,47,.14)}
+button{border:1px solid var(--ink);border-radius:9px;padding:12px 17px;background:var(--ink);color:white;font:700 13px inherit;cursor:pointer;transition:transform .18s,background .18s,border-color .18s}
+button:hover{transform:translateY(-1px);filter:none;background:#34302a}
+button.secondary{background:var(--cream);color:#5f5140;border-color:#f0e3c8}
+button.secondary:hover{background:#fff0cf}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px;align-items:center}
+.tools #png{background:var(--yellow);border-color:var(--yellow);color:#332b1d}
+.mark-color{display:flex;align-items:center;gap:7px;padding:5px 9px;border:1px solid var(--line);border-radius:9px;background:#fffdf9;color:#665f54;font-size:12px;font-weight:700}.mark-color input{width:30px;height:27px;padding:0;border:0;background:transparent;cursor:pointer}
+.tip{font-size:12px;color:#777168;margin:17px 0 0;line-height:1.85;padding:13px 15px;background:#fffaf0;border-radius:10px}
+.tip strong{display:block;color:#574a35;margin-bottom:5px}
+.tip ul{margin:0;padding-left:19px}
+.result{font-size:12px;color:var(--blue);margin-left:auto;font-weight:600}
+#wrap{overflow:auto;margin:0 auto 24px;padding:18px 20px 28px;max-width:1160px;max-height:68vh;text-align:center;background:var(--white);border:1px solid var(--line);border-radius:20px;box-shadow:0 8px 28px rgba(55,43,20,.035);scroll-behavior:smooth;overscroll-behavior:contain}
+#map{display:block;margin:0 auto;background:white;box-shadow:0 2px 18px rgba(0,0,0,.07);max-width:none;transform-origin:top center}
+.seat{cursor:pointer}.seat.marked .seat-shape{stroke-width:2.8!important}.seat:hover .seat-shape{stroke:var(--blue);stroke-width:2.5}
+.footer{text-align:center;color:var(--muted);font-size:11px;padding:28px 18px 34px;line-height:1.9}
+.modal-backdrop{position:fixed;inset:0;background:rgba(23,23,23,.48);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}.modal-backdrop.show{display:flex}
+.modal{width:min(390px,100%);background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:0 18px 55px #0003}
+.modal h2{font-size:18px;margin:0 0 10px;color:var(--ink)}.modal p{font-size:14px;line-height:1.65;color:#625d54;margin:0 0 18px}.modal button{min-width:90px}
+@media(max-width:760px){.header{padding:25px 18px 20px}.header h1{font-size:23px}.panel{margin:0 12px 16px;padding:20px 16px;border-radius:15px}.searchrow{grid-template-columns:1fr 1fr}.searchrow .field:first-child{grid-column:1/-1}.searchrow button{width:100%}.tools button{flex:1 1 auto}.result{width:100%;margin:5px 0 0}#wrap{margin:0 10px 16px;padding:10px;border-radius:14px}}
+</style></head><body>
+<header class="header"><h1>${safeTitle}</h1></header>
+<section class="panel"><div class="searchrow">
+<label class="field">選擇區域<select id="area"><option value="">請選擇區域</option></select></label>
+<label class="field">排數<input id="row" type="text" placeholder="例如：01、02、03"></label>
+<label class="field">座號<input id="seat" type="text" placeholder="例如：01、02、03"></label>
+<button id="search">查詢</button><button id="add" class="secondary">加入比較</button>
+</div><div class="tools"><label class="mark-color" for="markColor">標記顏色<input id="markColor" type="color" value="#f28b35" title="選擇座位標記顏色"></label><button id="clear" class="secondary">清除標記</button><button id="minus" class="secondary">－ 縮小</button><button id="plus" class="secondary">＋ 放大</button><button id="reset" class="secondary">重設大小</button><button id="png">匯出 PNG 圖檔</button><span id="result" class="result">請選擇區域並輸入排數、座號</span></div><div class="tip"><strong>使用說明</strong>
+  <ul>
+    <li>先選擇座位區，再輸入排數與座號，按「<span style="color:#d9534f;font-weight:700;">查詢</span>」標記座位。</li>
+    <li>按「<span style="color:#d9534f;font-weight:700;">加入比較</span>」可連續加入其他座位，同時標記多個位置。</li>
+    <li>按「<span style="color:#d9534f;font-weight:700;">清除標記</span>」可清除所有已標記座位；也可以直接點擊座位圖上的座位切換標記。</li>
+    <li>查詢或加入比較後，座位圖會<span style="color:#d9534f;font-weight:700;">自動平順移動到該座位附近</span>；使用「放大／縮小」調整座位圖大小，按「重設大小」恢復原始比例。</li>
+    <li>按「<span style="color:#d9534f;font-weight:700;">匯出 PNG 圖檔</span>」下載目前座位圖及標記結果。</li>
+    <li>請依照座位圖上的格式輸入排數與座號；若座位圖顯示 01、02、03，請輸入 01、02、03，<span style="color:#d9534f;font-weight:700;">個位數前方需要補 0</span>。</li>
+    <li><span style="color:#d9534f;font-weight:700;">座位圖僅供參考，實際依現場及主辦為主</span>。</li></ul></div></section>
+<div class="modal-backdrop" id="alertModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal"><h2 id="modalTitle">請檢查輸入資料</h2><p id="modalMessage"></p><div style="text-align:right"><button id="modalOk">我知道了</button></div></div></div>
+<div id="wrap"><svg id="map" viewBox="0 0 ${exportW} ${exportH}" width="${exportW}" height="${exportH}" xmlns="http://www.w3.org/2000/svg"></svg></div><div class="footer">座位資訊以主辦單位及現場公告為準<br>Seat plan design &amp; layout: @hanaandone.stu</div>
+<script>
+const items=${data},W=${exportW},H=${exportH},svg=document.getElementById('map'),NS='http://www.w3.org/2000/svg';
+function E(t,a){const n=document.createElementNS(NS,t);Object.entries(a).forEach(([k,v])=>{if(v!==undefined&&v!==null)n.setAttribute(k,v)});return n}
+const areas=new Map();items.filter(o=>o.type==='zoneLabel').forEach(o=>areas.set(o.groupId,(o.text||o.name||'未命名區域').trim()));
+// 下拉選單以顯示名稱去重；同名但不同 groupId 的左右區域仍保留各自資料。
+const areaNames=[...new Set([...areas.values()])].sort((a,b)=>a.localeCompare(b,'zh-Hant',{numeric:true,sensitivity:'base'}));
+const areaSelect=document.getElementById('area');areaNames.forEach(name=>{const op=document.createElement('option');op.value=name;op.textContent=name;areaSelect.append(op)});
+const seats=items.filter(o=>o.type==='seat');const rowLabels=items.filter(o=>o.type==='rowlabel');
+function rowFor(seat){const same=rowLabels.filter(r=>r.groupId===seat.groupId).sort((a,b)=>Math.abs(a.y-seat.y)-Math.abs(b.y-seat.y));return same.length?same[0].text:''}
+const marked=new Map();const nodes=new Map();const markColor=document.getElementById('markColor');
+function render(){svg.replaceChildren();items.forEach(o=>{let g=E('g',{class:'obj'+(o.type==='seat'?' seat':'')+(marked.has(o.id)?' marked':''),transform:'translate('+o.x+' '+o.y+') rotate('+(o.rotate||0)+' '+o.w/2+' '+o.h/2+')','data-id':o.id});let t,sh;
+ if(o.type==='seat'){sh=E('rect',{class:'seat-shape',width:o.w,height:o.h,rx:4,fill:o.fill||'#315f86',stroke:o.stroke||'#243447','stroke-width':1.3});g.append(sh);t=E('text',{x:o.w/2,y:o.h/2+4,'text-anchor':'middle','font-size':o.fontSize||Math.min(12,o.h*.48),'font-family':o.fontFamily||'sans-serif',fill:o.textColor||'#ffffff','font-weight':600});t.textContent=o.text;g.append(t);g.addEventListener('click',()=>{if(marked.has(o.id))marked.delete(o.id);else marked.set(o.id,markColor.value);updateMarks();document.getElementById('result').textContent=marked.size?'已標記 '+marked.size+' 個座位':'已取消標記'})}
+ else if(o.type==='rowlabel'){const al=o.textAlign||'end',tx=al==='start'?-o.w:al==='middle'?-o.w/2:0;t=E('text',{x:tx,y:Math.max(17,o.h*.72),'font-size':o.fontSize||14,'font-family':o.fontFamily||'sans-serif',fill:o.fill||'#243447','font-weight':700,'text-anchor':al==='start'?'start':al==='middle'?'middle':'end'});t.textContent=o.text;g.append(t)}
+ else if(o.type==='zoneLabel'||o.type==='text'){const al=o.textAlign||(o.type==='zoneLabel'?'middle':'start'),tx=al==='start'?0:al==='middle'?o.w/2:o.w;t=E('text',{x:tx,y:Math.max(18,o.h*.72),'font-size':o.fontSize||16,'font-family':o.fontFamily||'sans-serif',fill:o.fill||'#243447','font-weight':700,'text-anchor':al==='start'?'start':al==='middle'?'middle':'end'});t.textContent=o.text;g.append(t)}
+ else if(o.type==='line'){g.append(E('line',{x1:0,y1:0,x2:o.w,y2:o.h,stroke:o.stroke||'#243447','stroke-width':3}))}
+ else if(o.type==='circle'){g.append(E('ellipse',{cx:o.w/2,cy:o.h/2,rx:o.w/2,ry:o.h/2,fill:o.fill||'none',stroke:o.stroke||'#243447','stroke-width':2}));if(o.text){t=E('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,fill:'#fff'});t.textContent=o.text;g.append(t)}}
+ else if(o.type==='trapezoid'){g.append(E('polygon',{points:\`\${o.w*.2},0 \${o.w*.8},0 \${o.w},\${o.h} 0,\${o.h}\`,fill:o.fill||'none',stroke:o.stroke||'#243447','stroke-width':2}));if(o.text){t=E('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||'sans-serif','font-weight':700,fill:'#fff'});t.textContent=o.text;g.append(t)}}
+ else if(o.type==='diamond'){g.append(E('polygon',{points:\`\${o.w/2},0 \${o.w},\${o.h/2} \${o.w/2},\${o.h} 0,\${o.h/2}\`,fill:o.fill||'none',stroke:o.stroke||'#243447','stroke-width':2}));if(o.text){t=E('text',{x:o.w/2,y:o.h/2+5,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||'sans-serif','font-weight':700,fill:'#fff'});t.textContent=o.text;g.append(t)}}
+ else{sh=E('rect',{width:o.w,height:o.h,rx:o.type==='roundRect'?Math.max(0,Math.min(Number(o.radius??12),Math.min(o.w,o.h)/2)):(o.type==='stage'?3:1),fill:o.fill||'none',stroke:o.stroke||'#243447','stroke-width':2});g.append(sh);if(o.text){t=E('text',{x:o.w/2,y:o.h/2+6,'text-anchor':'middle','font-size':o.fontSize||18,'font-family':o.fontFamily||'sans-serif','font-weight':700,fill:'#fff'});t.textContent=o.text;g.append(t)}}
+ svg.append(g);if(o.type==='seat')nodes.set(o.id,g)
+ })}
+function updateMarks(){nodes.forEach((n,id)=>{const color=marked.get(id),on=Boolean(color),seat=seats.find(o=>o.id===id);n.classList.toggle('marked',on);const shape=n.querySelector('.seat-shape'),label=n.querySelector('text');if(shape){shape.setAttribute('fill',on?color:(seat?.fill||'#315f86'));shape.setAttribute('stroke',on?color:(seat?.stroke||'#243447'));shape.setAttribute('stroke-width',on?'2.8':'1.3')}if(label)label.setAttribute('fill',seat?.textColor||'#ffffff')})}
+function normalizeNumber(v){const s=String(v??'').trim();if(!s)return '';if(/^\d+$/.test(s)){const n=Number.parseInt(s,10);return String(n)}return s.toLocaleUpperCase()}
+function showAlert(title,message){document.getElementById('modalTitle').textContent=title;document.getElementById('modalMessage').textContent=message;document.getElementById('alertModal').classList.add('show');document.getElementById('modalOk').focus()}
+document.getElementById('modalOk').onclick=()=>document.getElementById('alertModal').classList.remove('show');document.getElementById('alertModal').addEventListener('click',e=>{if(e.target.id==='alertModal')e.currentTarget.classList.remove('show')});document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('alertModal').classList.remove('show')});
+function findSeat(){const areaName=areaSelect.value,rowRaw=document.getElementById('row').value,seatRaw=document.getElementById('seat').value;if(!areaName){showAlert('尚未選擇區域','請先從「選擇區域」下拉選單中選擇要查詢的座位區。');return null}if(!String(rowRaw).trim()){showAlert('尚未輸入排數','請依照座位圖上的格式輸入排數，例如 01、02、03。');document.getElementById('row').focus();return null}if(!String(seatRaw).trim()){showAlert('尚未輸入座號','請依照座位圖上的格式輸入座號，例如 01、02、03。');document.getElementById('seat').focus();return null}const row=normalizeNumber(rowRaw),number=normalizeNumber(seatRaw);return seats.find(o=>areas.get(o.groupId)===areaName&&normalizeNumber(rowFor(o))===row&&normalizeNumber(o.text)===number)||null}
+function locateSeat(o){const wrap=document.getElementById('wrap');const x=(o.x+o.w/2)*zoom;const y=(o.y+o.h/2)*zoom;wrap.scrollTo({left:Math.max(0,x-wrap.clientWidth/2),top:Math.max(0,y-wrap.clientHeight/2),behavior:'smooth'});wrap.scrollIntoView({behavior:'smooth',block:'center'});} 
+function focusSeat(add){const o=findSeat();if(!o){if(areaSelect.value&&String(document.getElementById('row').value).trim()&&String(document.getElementById('seat').value).trim())showAlert('找不到符合的座位','查無這個座位，請確認區域、排數與座號是否正確。若座位圖顯示 01，請輸入 01，不要省略前面的 0。');return}if(!add)marked.clear();marked.set(o.id,markColor.value);updateMarks();document.getElementById('result').textContent='已標記：'+(areas.get(o.groupId)||'')+' '+rowFor(o)+'排 '+o.text+'號'+(marked.size>1?'（共 '+marked.size+' 個）':'');locateSeat(o);}
+document.getElementById('search').onclick=()=>focusSeat(false);document.getElementById('add').onclick=()=>focusSeat(true);[document.getElementById('row'),document.getElementById('seat')].forEach(el=>el.addEventListener('keydown',e=>{if(e.key==='Enter')focusSeat(false)}));document.getElementById('clear').onclick=()=>{marked.clear();updateMarks();document.getElementById('result').textContent='已清除所有標記'};
+let zoom=1;function setZoom(){svg.style.width=(W*zoom)+'px';svg.style.height=(H*zoom)+'px'}document.getElementById('plus').onclick=()=>{zoom=Math.min(3,zoom+.15);setZoom()};document.getElementById('minus').onclick=()=>{zoom=Math.max(.25,zoom-.15);setZoom()};document.getElementById('reset').onclick=()=>{zoom=1;setZoom()};
+document.getElementById('png').onclick=()=>{const clone=svg.cloneNode(true);clone.setAttribute('width',W);clone.setAttribute('height',H);clone.setAttribute('xmlns',NS);const xml=new XMLSerializer().serializeToString(clone),blob=new Blob([xml],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{const scale=2,titleH=90,footerH=54,c=document.createElement('canvas');c.width=W*scale;c.height=(H+titleH+footerH)*scale;const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='#333';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold '+(28*scale)+'px system-ui, sans-serif';ctx.fillText(document.title,c.width/2, titleH*scale/2,c.width-80*scale);ctx.drawImage(img,0,titleH*scale,c.width,H*scale);ctx.save();ctx.globalAlpha=.13;ctx.fillStyle='#555';ctx.textAlign='center';ctx.textBaseline='middle';const wm='@hanaandone.stu',fs=22*scale;ctx.font='bold '+fs+'px system-ui, sans-serif';const tw=ctx.measureText(wm).width,dx=tw+fs*1.5,dy=fs*3.2;ctx.translate(c.width/2,c.height/2);ctx.rotate(-Math.PI/6);let r=0;for(let y=-c.height*1.5;y<c.height*1.5;y+=dy){for(let x=-c.width*1.5-dx;x<c.width*1.5+dx;x+=dx)ctx.fillText(wm,x+(r%2)*dx/2,y);r++}ctx.restore();ctx.save();ctx.fillStyle='#777';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=(11*scale)+'px system-ui, sans-serif';ctx.fillText('* 座位圖僅供參考，實際座位配置及安排請以現場狀況與主辦單位公告為準。',c.width/2,(titleH+H+footerH/2)*scale,c.width-40*scale);ctx.restore();c.toBlob(b=>{if(b){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='座位表.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}URL.revokeObjectURL(url)},'image/png')};img.onerror=()=>{URL.revokeObjectURL(url);showAlert('PNG 匯出失敗','目前無法產生圖檔，請重新操作。')};img.src=url};
+render();setZoom();
+<\/script></body></html>`;
+ download(new Blob([out],{type:'text/html;charset=utf-8'}),'座位表.html');
+ $('status').textContent='公開查詢 HTML 已匯出';
+};
+
+function getSelectedObjects(){
+ const ids=new Set(selectedIds);if(selected)ids.add(selected);
+ return items.filter(o=>ids.has(o.id));
+}
+function setSelection(ids,activeId=null,anchorId=null){
+ selectedIds=new Set(ids);
+ selected=activeId&&selectedIds.has(activeId)?activeId:([...selectedIds].pop()||null);
+ selectionAnchorId=anchorId||selectionAnchorId||selected;
+ render();
+ $('status').textContent=`已選取 ${selectedIds.size} 個物件`;
+}
+function selectableObjects(){
+ return items.filter(o=>o.type!=='blockBounds').sort((a,b)=>(a.y+a.h/2)-(b.y+b.h/2)||(a.x+a.w/2)-(b.x+b.w/2));
+}
+function selectSeatLine(axis){
+ // 以目前「作用中的物件 selected」作為定位依據，不能從多選集合任意抓第一個座位。
+ // 否則之前多選過的座位會被誤當成這次點選的位置，造成整排／整欄偏移。
+ let active=items.find(o=>o.id===selected&&o.type==='seat');
+ if(!active){
+  const selectedSeats=items.filter(o=>selectedIds.has(o.id)&&o.type==='seat');
+  if(selectedSeats.length===1)active=selectedSeats[0];
+ }
+ if(!active||!active.groupId){
+  $('status').textContent='請先單獨點選要作為定位基準的座位，再使用「選取整排／整欄」。';
+  return;
+ }
+ const groupSeats=items.filter(o=>o.type==='seat'&&o.groupId===active.groupId);
+ const track=axis==='row'?active.y:active.x;
+ // 座位建立時每格的位置可能有間距，使用同一個實際座標列／欄比對，不使用最近格子或選取框座標。
+ const seats=groupSeats.filter(o=>Math.abs((axis==='row'?o.y:o.x)-track)<1);
+ if(!seats.length){
+  $('status').textContent='找不到與目前座位同列／同欄的其他座位。';
+  return;
+ }
+ snapshot();
+ selectedIds=new Set(seats.map(o=>o.id));
+ selected=active.id;
+ selectionAnchorId=active.id;
+ keyboardSeatRange=null;
+ // 選取框直接使用該列／欄座位的實際物件邊界。
+ const minX=Math.min(...seats.map(o=>o.x));
+ const minY=Math.min(...seats.map(o=>o.y));
+ const maxX=Math.max(...seats.map(o=>o.x+o.w));
+ const maxY=Math.max(...seats.map(o=>o.y+o.h));
+ selectedCellRange={x:minX,y:minY,w:maxX-minX,h:maxY-minY};
+ selectedCell={x:active.x,y:active.y};
+ hoverCell=null;
+ render();
+ $('status').textContent=`已選取整${axis==='row'?'排':'欄'}｜共 ${seats.length} 個座位`;
+}
+
+const selectRowButton=$('selectSeatRow');
+const selectColumnButton=$('selectSeatColumn');
+if(selectRowButton)selectRowButton.addEventListener('click',()=>selectSeatLine('row'));
+if(selectColumnButton)selectColumnButton.addEventListener('click',()=>selectSeatLine('column'));
+
+function keyboardSelectSeatRange(key){
+ const active=items.find(o=>o.id===selected)||items.find(o=>selectedIds.has(o.id));
+ if(!active)return false;
+ const isRowLabel=active.type==='rowlabel';
+ if(!['seat','rowlabel'].includes(active.type)||!active.groupId)return false;
+ const allowedType=isRowLabel?'rowlabel':'seat';
+
+ // 排數文字的可視範圍在物件原點左側（x - w 到 x），
+ // 因此排數文字的鍵盤選取只用 Y 軸定位，不能共用座位格的 XY 格線框。
+ if(isRowLabel){
+  if(!keyboardSeatRange||keyboardSeatRange.groupId!==active.groupId||keyboardSeatRange.type!=='rowlabel'){
+   keyboardSeatRange={groupId:active.groupId,type:'rowlabel',anchorY:active.y,cursorY:active.y};
+  }
+  if(key==='ArrowUp')keyboardSeatRange.cursorY=Math.max(0,keyboardSeatRange.cursorY-GRID);
+  if(key==='ArrowDown')keyboardSeatRange.cursorY+=GRID;
+  const y1=Math.min(keyboardSeatRange.anchorY,keyboardSeatRange.cursorY);
+  const y2=Math.max(keyboardSeatRange.anchorY,keyboardSeatRange.cursorY);
+  const labels=items.filter(o=>o.type==='rowlabel'&&o.groupId===active.groupId&&
+   o.y>=y1-2&&o.y<=y2+2);
+  selectedIds=new Set(labels.map(o=>o.id));
+  selected=labels.find(o=>Math.abs(o.y-keyboardSeatRange.cursorY)<=2)?.id||active.id;
+  selectionAnchorId=labels.find(o=>Math.abs(o.y-keyboardSeatRange.anchorY)<=2)?.id||active.id;
+  // 排數文字不使用格子範圍標記，避免標記落在右側相鄰座位欄。
+  selectedCellRange=null;
+  selectedCell=null;
+  hoverCell=null;
+  render();
+  $('status').textContent=`已選取 ${selectedIds.size} 個排數文字`;
+  return true;
+ }
+
+ if(!keyboardSeatRange||keyboardSeatRange.groupId!==active.groupId||keyboardSeatRange.type!=='seat'){
+  keyboardSeatRange={groupId:active.groupId,type:'seat',anchor:{x:snap(active.x),y:snap(active.y)},cursor:{x:snap(active.x),y:snap(active.y)}};
+ }
+ const step=key==='ArrowLeft'?{x:-GRID,y:0}:key==='ArrowRight'?{x:GRID,y:0}:key==='ArrowUp'?{x:0,y:-GRID}:{x:0,y:GRID};
+ keyboardSeatRange.cursor={x:Math.max(0,keyboardSeatRange.cursor.x+step.x),y:Math.max(0,keyboardSeatRange.cursor.y+step.y)};
+ const a=keyboardSeatRange.anchor,c=keyboardSeatRange.cursor;
+ const x1=Math.min(a.x,c.x),y1=Math.min(a.y,c.y),x2=Math.max(a.x,c.x),y2=Math.max(a.y,c.y);
+ const seats=items.filter(o=>o.type==='seat'&&o.groupId===active.groupId&&
+  o.x>=x1-2&&o.x<=x2+2&&o.y>=y1-2&&o.y<=y2+2);
+ selectedCellRange={x:x1,y:y1,w:x2-x1+GRID,h:y2-y1+GRID};
+ selectedCell={x:c.x,y:c.y};
+ selectedIds=new Set(seats.map(o=>o.id));
+ selected=seats.find(o=>o.x===c.x&&o.y===c.y)?.id||active.id;
+ selectionAnchorId=seats.find(o=>o.x===a.x&&o.y===a.y)?.id||active.id;
+ render();
+ $('status').textContent=`已選取 ${selectedIds.size} 個座位｜${selectedCellRange.w/GRID} 欄 × ${selectedCellRange.h/GRID} 列`;
+ return true;
+}
+
+function keyboardMoveSelection(key,extend,wholeRun){
+ const objects=selectableObjects();
+ if(!objects.length)return false;
+ const active=objects.find(o=>o.id===selected)||objects.find(o=>selectedIds.has(o.id));
+ if(!active)return false;
+ const anchor=objects.find(o=>o.id===(selectionAnchorId||active.id))||active;
+ const horizontal=key==='ArrowLeft'||key==='ArrowRight';
+ const sign=(key==='ArrowRight'||key==='ArrowDown')?1:-1;
+ const axis=o=>horizontal?o.x+o.w/2:o.y+o.h/2;
+ const crossStart=o=>horizontal?o.y:o.x;
+ const crossEnd=o=>horizontal?o.y+o.h:o.x+o.w;
+ const origin=active;
+ let candidates=[];
+ let sameTrack;
+
+ // 排數文字的鍵盤移動／延伸只能在同一座位區的排數文字之間進行，絕不納入座位。
+ if(active.type==='rowlabel'&&active.groupId){
+  sameTrack=o=>o.type==='rowlabel'&&o.groupId===active.groupId&&
+   (horizontal?Math.abs(o.y-active.y)<=3:true);
+  candidates=objects.filter(o=>o.id!==active.id&&sameTrack(o)&&
+   (axis(o)-axis(active))*sign>2)
+   .sort((a,b)=>Math.abs(axis(a)-axis(active))-Math.abs(axis(b)-axis(active)));
+ }else if(active.type==='seat'&&active.groupId){
+  const rowRef=extend&&anchor.type==='seat'&&anchor.groupId===active.groupId?anchor:active;
+  const trackValue=horizontal?rowRef.y:rowRef.x;
+  sameTrack=o=>o.type==='seat'&&o.groupId===active.groupId&&
+   Math.abs((horizontal?o.y:o.x)-trackValue)<=3;
+  candidates=objects.filter(o=>o.id!==active.id&&sameTrack(o)&&
+   (axis(o)-axis(active))*sign>2)
+   .sort((a,b)=>Math.abs(axis(a)-axis(active))-Math.abs(axis(b)-axis(active)));
+ }else{
+  const trackTolerance=3;
+  sameTrack=o=>{
+   const overlap=Math.min(crossEnd(origin),crossEnd(o))-Math.max(crossStart(origin),crossStart(o));
+   return overlap>trackTolerance ||
+    Math.abs((crossStart(origin)+crossEnd(origin))/2-(crossStart(o)+crossEnd(o))/2)<=trackTolerance;
+  };
+  candidates=objects.filter(o=>o.id!==origin.id&&sameTrack(o)&&
+   (axis(o)-axis(origin))*sign>2)
+   .sort((a,b)=>Math.abs(axis(a)-axis(origin))-Math.abs(axis(b)-axis(origin)));
+ }
+ if(!candidates.length)return true;
+ const target=wholeRun?candidates[candidates.length-1]:candidates[0];
+ if(!extend){
+  setSelection([target.id],target.id,target.id);
+  return true;
+ }
+ const rangeAnchor=anchor;
+ const low=Math.min(axis(rangeAnchor),axis(target));
+ const high=Math.max(axis(rangeAnchor),axis(target));
+ const picked=objects.filter(o=>sameTrack(o)&&axis(o)>=low-2&&axis(o)<=high+2);
+ setSelection(picked.map(o=>o.id),target.id,rangeAnchor.id);
+ return true;
+}
+function copySelection(cut=false){
+ const chosen=getSelectedObjects();
+ if(!chosen.length)return;
+ clipboard=chosen.map(clone);
+ if(cut){
+  snapshot();
+  const ids=new Set(chosen.map(o=>o.id));
+  const groups=new Set(chosen.filter(o=>o.type==='blockBounds'&&o.groupId).map(o=>o.groupId));
+  items=items.filter(o=>!ids.has(o.id)&&!(o.groupId&&groups.has(o.groupId)));
+  selected=null;selectedIds.clear();selectionAnchorId=null;render();
+  $('status').textContent=`已剪下 ${chosen.length} 個物件`;
+ }else $('status').textContent=`已複製 ${chosen.length} 個物件`;
+}
+document.addEventListener('keydown',e=>{
+ const tag=(document.activeElement&&document.activeElement.tagName||'').toLowerCase();
+ const editing=['input','textarea','select'].includes(tag);
+ if(editing)return;
+ const mod=e.ctrlKey||e.metaKey;
+ const key=e.key.toLowerCase();
+
+ if(mod&&key==='a'){
+  const all=items.filter(o=>o.type!=='blockBounds');
+  setSelection(all.map(o=>o.id),all.length?all[all.length-1].id:null,all.length?all[0].id:null);
+  e.preventDefault();return;
+ }
+ if(e.key.startsWith('Arrow')&&tool==='select'){
+  const hasObjectSelection=!!selected||selectedIds.size>0;
+  if(hasObjectSelection){
+   if(mod&&e.shiftKey){
+    const handled=keyboardSelectSeatRange(e.key);
+    if(handled){e.preventDefault();return}
+   }else if(e.shiftKey){
+    const handled=keyboardMoveSelection(e.key,true,false);
+    if(handled){e.preventDefault();return}
+   }else if(!mod){
+    const handled=keyboardMoveSelection(e.key,false,false);
+    if(handled){e.preventDefault();return}
+   }
+  }else if(e.shiftKey&&!mod){
+   const current=selectedCell||{x:0,y:0};if(!selectedCellRange)selectedCellRange={x:current.x,y:current.y,w:GRID,h:GRID};
+   const step=e.key==='ArrowLeft'?{x:-GRID,y:0}:e.key==='ArrowRight'?{x:GRID,y:0}:e.key==='ArrowUp'?{x:0,y:-GRID}:{x:0,y:GRID};
+   const nx=Math.max(0,current.x+step.x),ny=Math.max(0,current.y+step.y),x1=Math.min(selectedCellRange.x,nx),y1=Math.min(selectedCellRange.y,ny),x2=Math.max(selectedCellRange.x+selectedCellRange.w,nx+GRID),y2=Math.max(selectedCellRange.y+selectedCellRange.h,ny+GRID);
+   selectedCellRange={x:x1,y:y1,w:x2-x1,h:y2-y1};selectedCell={x:nx,y:ny};render();$('status').textContent=`已選取空白格範圍：${selectedCellRange.w/GRID} 欄 × ${selectedCellRange.h/GRID} 列`;e.preventDefault();return;
+  }else if(!mod){
+   // 沒有選取物件時，方向鍵改為移動畫布格子游標，讓空白格也能用鍵盤定位。
+   const step=e.key==='ArrowLeft'?{x:-GRID,y:0}:e.key==='ArrowRight'?{x:GRID,y:0}:e.key==='ArrowUp'?{x:0,y:-GRID}:{x:0,y:GRID};
+   const current=selectedCell||{x:0,y:0};
+   selectedCell={x:Math.max(0,current.x+step.x),y:Math.max(0,current.y+step.y)};
+   ensureCanvasContains(selectedCell.x,selectedCell.y,GRID,GRID);
+   hoverCell=null;updateCellMarker();
+   $('status').textContent=`目前格子：第 ${selectedCell.x/GRID+1} 欄、第 ${selectedCell.y/GRID+1} 列`;
+   e.preventDefault();return;
+  }
+ }
+ if(mod&&key==='c'){copySelection(false);e.preventDefault();return}
+ if(mod&&key==='x'){copySelection(true);e.preventDefault();return}
+ if(mod&&key==='v'){
+  if(clipboard&&clipboard.length){
+   snapshot();
+   const clones=clipboard.map(o=>{const c=clone(o);c.id=uid();c.x=snap(c.x+GRID);c.y=snap(c.y+GRID);c.name=(c.name||c.type)+' 副本';return c});
+   items.push(...clones);setSelection(clones.map(o=>o.id),clones[clones.length-1].id,clones[0].id);
+   $('status').textContent=`已貼上 ${clones.length} 個物件`;
+  }
+  e.preventDefault();return;
+ }
+ if(mod&&key==='d'){
+  const chosen=getSelectedObjects();
+  if(chosen.length){
+   snapshot();
+   const clones=chosen.map(o=>{const c=clone(o);c.id=uid();c.x+=GRID;c.y+=GRID;c.name=(c.name||c.type)+' 副本';return c});
+   items.push(...clones);setSelection(clones.map(o=>o.id),clones[clones.length-1].id,clones[0].id);
+   $('status').textContent=`已複製 ${clones.length} 個物件`;
+  }
+  e.preventDefault();return;
+ }
+ if(mod&&key==='z'&&!e.shiftKey){$('undo').click();e.preventDefault();return}
+ if((mod&&key==='y')||(mod&&e.shiftKey&&key==='z')){$('redo').click();e.preventDefault();return}
+ if(e.key==='Escape'){selected=null;selectedIds.clear();selectionAnchorId=null;keyboardSeatRange=null;selectedCellRange=null;drag=null;render();$('status').textContent='已取消選取';return}
+ if(e.key==='Delete'||e.key==='Backspace'){if(selected||selectedIds.size){$('delete').click();selectionAnchorId=null;e.preventDefault()}}
+});
+
+render();syncCanvasSize();
+</script>
+</body></html>
